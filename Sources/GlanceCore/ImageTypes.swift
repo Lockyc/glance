@@ -16,9 +16,11 @@ public enum ImageTypes {
         type.conforms(to: .image) && !type.conforms(to: .pdf)
     }
 
-    /// Uses the file's recorded content type when the file exists, else its extension.
+    /// Uses the file's recorded content type when the file exists, else its extension. A symlink
+    /// records its own type (`public.symlink`), so it is judged by its extension.
     public static func isViewable(_ url: URL) -> Bool {
         let recorded = (try? url.resourceValues(forKeys: [.contentTypeKey]))?.contentType
+            .flatMap { $0.conforms(to: .symbolicLink) ? nil : $0 }
         guard let type = recorded ?? UTType(filenameExtension: url.pathExtension) else { return false }
         return isViewable(type)
     }

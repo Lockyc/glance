@@ -94,6 +94,19 @@ final class FolderModelTests: XCTestCase {
         XCTAssertEqual(m.current?.lastPathComponent, "b.jpg")
     }
 
+    func testSymlinkedImageListsUnderItsOwnNameInTheFolder() throws {
+        let dir = Fixtures.tempDir()
+        let elsewhere = Fixtures.tempDir()
+        Fixtures.touch(["real.jpg"], in: elsewhere)
+        Fixtures.touch(["a.jpg"], in: dir)
+        try FileManager.default.createSymbolicLink(at: dir.appendingPathComponent("link.jpg"),
+                                                   withDestinationURL: elsewhere.appendingPathComponent("real.jpg"))
+        XCTAssertEqual(names(try FolderModel.load(folder: dir)), ["a.jpg", "link.jpg"])
+        let opened = try FolderModel.load(folder: dir, current: dir.appendingPathComponent("link.jpg"))
+        XCTAssertEqual(opened.current?.lastPathComponent, "link.jpg")
+        XCTAssertEqual(names(opened), ["a.jpg", "link.jpg"])
+    }
+
     func testRescanPicksUpNewFiles() throws {
         let m = try model(["a.jpg"], current: "a.jpg")
         Fixtures.touch(["b.jpg"], in: m.folder)
