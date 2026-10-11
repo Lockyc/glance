@@ -52,8 +52,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let model = (try? FolderModel.load(folder: folder, current: file))
-            ?? FolderModel(folder: folder, files: file.map { [$0] } ?? [], current: file)
+        // Opens on the one file at once; the window lists the folder in the background.
+        let model = FolderModel(folder: folder, files: file.map { [FolderModel.canonical($0)] } ?? [], current: file)
         let controller = BrowserWindowController(model: model, thumbnails: thumbnails, startInGrid: isFolder)
         controller.onClose = { [weak self, weak controller] in self?.controllers.removeAll { $0 === controller } }
         controllers.append(controller)

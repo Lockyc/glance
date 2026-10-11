@@ -96,8 +96,4 @@ public final class FolderModel {
         }
         onChange?(.files)
     }
-
-    public func rescan() throws {
-        replaceFiles(try Self.scan(folder))
-    }
 }

@@ -66,6 +66,9 @@ final class ViewerView: NSView, ZoomActions {
 
     func showEmpty() { showMessage("No images in this folder") }
 
+    /// Blank until the folder listing arrives, so an unscanned folder never claims to be empty.
+    func showLoading() { showMessage("") }
+
     func upgrade(_ decoded: DecodedImage) {
         guard decoded.url == image?.url, max(decoded.cgImage.width, decoded.cgImage.height) > shownPixels else { return }
         shownPixels = max(decoded.cgImage.width, decoded.cgImage.height)

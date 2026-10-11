@@ -110,7 +110,7 @@ final class FolderModelTests: XCTestCase {
     func testRescanPicksUpNewFiles() throws {
         let m = try model(["a.jpg"], current: "a.jpg")
         Fixtures.touch(["b.jpg"], in: m.folder)
-        try m.rescan()
+        m.replaceFiles(try FolderModel.scan(m.folder))
         XCTAssertEqual(names(m), ["a.jpg", "b.jpg"])
     }
 }

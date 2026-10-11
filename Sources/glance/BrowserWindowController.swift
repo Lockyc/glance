@@ -13,6 +13,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private var watcher: FolderWatcher?
     private var showingGrid = false
     private var resolutionGeneration = 0
+    private var scanGeneration = 0
+    private var scanned = false
 
     init(model: FolderModel, thumbnails: ThumbnailService, startInGrid: Bool) {
         // Locals, not self.viewer/self.grid: self can't be read before super.init.
@@ -52,10 +54,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             self.updateTitle()
         }
         model.onChange = { [weak self] in self?.modelChanged($0) }
-        watcher = FolderWatcher(folder: model.folder) { [weak model] in try? model?.rescan() }
+        watcher = FolderWatcher(folder: model.folder) { [weak self] in self?.rescan() }
 
         modelChanged(.files)
         startInGrid ? showGrid() : showViewer()
+        rescan()
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
@@ -92,11 +95,32 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: Model
 
+    /// Lists the folder off the main thread (a network volume can take seconds), then hands the
+    /// result to the model. The first scan keeps the file the window was opened on, even if it
+    /// is not an image; a newer scan supersedes an older one still in flight.
+    private func rescan() {
+        scanGeneration += 1
+        let generation = scanGeneration
+        let folder = model.folder
+        let keep = scanned ? nil : model.current
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let files = try? FolderModel.listing(folder, including: keep)
+            DispatchQueue.main.async {
+                guard let self, generation == self.scanGeneration else { return }
+                let wasScanned = self.scanned
+                self.scanned = true
+                if let files { self.model.replaceFiles(files) }
+                if !wasScanned, self.model.files.isEmpty { self.modelChanged(.files) }
+                self.decodeCache.revalidate()
+            }
+        }
+    }
+
     private func modelChanged(_ change: FolderModel.Change) {
         if change == .files { grid.reload() }
         guard let index = model.currentIndex, let url = model.current else {
             decodeCache.clear()
-            viewer.showEmpty()
+            scanned ? viewer.showEmpty() : viewer.showLoading()
             updateTitle()
             return
         }
