@@ -191,8 +191,18 @@ final class ViewerView: NSView, ZoomActions {
         }
     }
 
+    /// Whether the current click sequence started on this view. Opening from a grid tile happens
+    /// on the first click, so the second click of that double-click must not toggle zoom here.
+    private var clickSequenceIsOurs = false
+
+    override func viewDidUnhide() {
+        super.viewDidUnhide()
+        clickSequenceIsOurs = false
+    }
+
     override func mouseDown(with event: NSEvent) {
-        guard event.clickCount == 2, let viewport else { return }
+        if event.clickCount <= 1 { clickSequenceIsOurs = true }
+        guard event.clickCount == 2, clickSequenceIsOurs, let viewport else { return }
         let point = convert(event.locationInWindow, from: nil)
         self.viewport = viewport.isFit ? viewport.zoomed(to: 1, about: point) : viewport.fitted()
         applyViewport()
