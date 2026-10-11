@@ -1,5 +1,6 @@
 # glance
 
+[![Release](https://img.shields.io/github/v/release/lockyc/glance?sort=semver&label=release)](https://github.com/lockyc/glance/releases/latest)
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-555)
 ![Swift](https://img.shields.io/badge/swift-6-F05138?logo=swift&logoColor=white)
 [![License](https://img.shields.io/github/license/lockyc/glance)](LICENSE)
