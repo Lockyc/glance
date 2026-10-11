@@ -1,5 +1,9 @@
 ---
 type: architecture
+links:
+  - rel: see-also
+    to: README.md
+    note: human-facing counterpart — what glance is and how to build it
 ---
 # glance
 
