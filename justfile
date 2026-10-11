@@ -48,3 +48,7 @@ install: bundle
     rm -rf /Applications/glance.app
     cp -R "{{app}}" /Applications/glance.app
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/glance.app
+
+# Install, then make glance the default viewer for every image type except PDF
+make-default: install
+    /Applications/glance.app/Contents/MacOS/glance --make-default
