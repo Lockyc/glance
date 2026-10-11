@@ -35,13 +35,16 @@ public final class DecodeCache {
             op.cancel()
             inFlight[url] = nil
         }
+        // Neighbours wait for the current image's decode, so it never shares the CPU with them.
+        var current = ordered.first.flatMap { inFlight[$0] }
         for (rank, url) in ordered.enumerated() where entries[url] == nil && inFlight[url] == nil {
             let op = BlockOperation()
             op.queuePriority = rank == 0 ? .veryHigh : .normal
-            op.addExecutionBlock { [weak op, decoder, maxPixelSize] in
+            if rank == 0 { current = op } else if let current { op.addDependency(current) }
+            op.addExecutionBlock { [weak self, weak op, decoder, maxPixelSize] in
                 guard let op, !op.isCancelled else { return }
                 let result = decoder.decode(url, maxPixelSize: maxPixelSize)
-                DispatchQueue.main.async { [weak self] in self?.finish(url, op, result) }
+                DispatchQueue.main.async { self?.finish(url, op, result) }
             }
             inFlight[url] = op
             queue.addOperation(op)
