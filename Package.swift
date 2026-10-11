@@ -8,6 +8,7 @@ let package = Package(
         .target(name: "GlanceCore"),
         .executableTarget(name: "glance", dependencies: ["GlanceCore"]),
         .testTarget(name: "GlanceCoreTests", dependencies: ["GlanceCore"]),
+        .testTarget(name: "glanceTests", dependencies: ["glance", "GlanceCore"]),
     ],
     swiftLanguageModes: [.v5]
 )
