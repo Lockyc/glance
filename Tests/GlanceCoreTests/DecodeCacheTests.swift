@@ -77,3 +77,48 @@ final class DecodeCacheTests: XCTestCase {
         XCTAssertNil(cache.result(for: files[0]))
     }
 }
+
+final class DecodeCacheFreshnessTests: XCTestCase {
+    func testPromotedNeighbourDoesNotWaitForTheOldCurrent() {
+        let files = (0..<20).map { URL(fileURLWithPath: "/f/\($0).jpg") }
+        let decoder = FakeDecoder()
+        decoder.delay = 0.3
+        let cache = DecodeCache(decoder: decoder, maxPixelSize: 100)
+        let start = Date()
+        var landed: TimeInterval?
+        let done = expectation(description: "landed")
+        cache.onDecoded = { url, _ in
+            if url == files[1], landed == nil { landed = Date().timeIntervalSince(start); done.fulfill() }
+        }
+        cache.focus(on: 0, in: files)
+        cache.focus(on: 1, in: files) // → pressed before 0 finished
+        wait(for: [done], timeout: 3)
+        XCTAssertLessThan(landed ?? .infinity, 0.5, "1 waited for 0's decode")
+    }
+
+    func testRevalidateRedecodesOnlyFilesThatChanged() throws {
+        let dir = Fixtures.tempDir()
+        let files = ["a.png", "b.png"].map { dir.appendingPathComponent($0) }
+        for url in files { Fixtures.write(Fixtures.testImage(width: 8, height: 8), to: url, type: .png) }
+        let decoder = FakeDecoder()
+        let cache = DecodeCache(decoder: decoder, maxPixelSize: 100, radius: 1)
+        var first = expectation(description: "initial")
+        first.expectedFulfillmentCount = 2
+        cache.onDecoded = { _, _ in first.fulfill() }
+        cache.focus(on: 0, in: files)
+        wait(for: [first], timeout: 3)
+
+        Fixtures.write(Fixtures.testImage(width: 16, height: 16), to: files[0], type: .png)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(60)], ofItemAtPath: files[0].path)
+        first = expectation(description: "redecoded")
+        var redecoded: [URL] = []
+        cache.onDecoded = { url, _ in redecoded.append(url); first.fulfill() }
+        cache.revalidate()
+        wait(for: [first], timeout: 3)
+        let settle = expectation(description: "settle")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { settle.fulfill() }
+        wait(for: [settle], timeout: 1)
+        XCTAssertEqual(redecoded, [files[0]])
+        XCTAssertEqual(decoder.calls.filter { $0 == files[1] }.count, 1)
+    }
+}
