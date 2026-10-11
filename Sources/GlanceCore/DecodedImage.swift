@@ -8,12 +8,15 @@ public struct DecodedImage {
     /// Full-resolution upright size; for SVG, the document's nominal size.
     public let pixelSize: CGSize
     public let isAnimated: Bool
+    /// Re-rasterisable at any size (SVG), rather than bounded by the file's pixels.
+    public let isVector: Bool
 
-    public init(url: URL, cgImage: CGImage, pixelSize: CGSize, isAnimated: Bool) {
+    public init(url: URL, cgImage: CGImage, pixelSize: CGSize, isAnimated: Bool, isVector: Bool = false) {
         self.url = url
         self.cgImage = cgImage
         self.pixelSize = pixelSize
         self.isAnimated = isAnimated
+        self.isVector = isVector
     }
 }
 

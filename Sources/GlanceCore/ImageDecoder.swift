@@ -63,6 +63,6 @@ public struct ImageDecoder: ImageDecoding {
         svg.draw(in: CGRect(x: 0, y: 0, width: width, height: height))
         NSGraphicsContext.restoreGraphicsState()
         guard let image = ctx.makeImage() else { return .failure(.unreadable) }
-        return .success(DecodedImage(url: url, cgImage: image, pixelSize: svg.size, isAnimated: false))
+        return .success(DecodedImage(url: url, cgImage: image, pixelSize: svg.size, isAnimated: false, isVector: true))
     }
 }

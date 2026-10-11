@@ -4,6 +4,8 @@ import CoreGraphics
 /// actual size on any display. Geometry is AppKit-style: origin bottom-left, view sizes in points.
 public struct Viewport: Equatable {
     public static let maxScale: CGFloat = 32
+    /// Largest long side an SVG is re-rasterised at when zoomed: 8192² × 4 bytes ≈ 256 MB.
+    public static let vectorPixelCeiling = 8192
 
     public private(set) var imageSize: CGSize
     public private(set) var viewSize: CGSize
@@ -31,6 +33,14 @@ public struct Viewport: Equatable {
         let k = pointsPerPixel
         return CGRect(x: viewSize.width / 2 - center.x * k, y: viewSize.height / 2 - center.y * k,
                       width: imageSize.width * k, height: imageSize.height * k)
+    }
+
+    /// Long side, in device pixels, of a bitmap that shows the current zoom at full detail:
+    /// never more than a raster file holds, nor more than `vectorPixelCeiling` for a vector.
+    public func detailPixels(isVector: Bool) -> Int {
+        let onScreen = Int((max(imageFrame.width, imageFrame.height) * backingScale).rounded(.up))
+        let limit = isVector ? Self.vectorPixelCeiling : Int(max(imageSize.width, imageSize.height).rounded(.up))
+        return min(onScreen, limit)
     }
 
     public func fitted() -> Viewport { .fit(imageSize: imageSize, viewSize: viewSize, backingScale: backingScale) }

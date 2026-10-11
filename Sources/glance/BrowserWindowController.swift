@@ -12,7 +12,14 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let grid: GridViewController
     private var watcher: FolderWatcher?
     private var showingGrid = false
-    private var resolutionGeneration = 0
+    /// Full-detail re-decodes for zoom run one at a time; a newer request or a change of file cancels the last.
+    private let upgrades: OperationQueue = {
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .userInitiated
+        return queue
+    }()
+    private var upgrade: Operation?
     private var scanGeneration = 0
     private var scanned = false
 
@@ -126,7 +133,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         }
         decodeCache.focus(on: index, in: model.files)
         // Only a change of file re-shows; a list change around the same file keeps its zoom.
-        if url != viewer.shownURL, let ready = decodeCache.result(for: url) { viewer.show(ready, for: url) }
+        if url != viewer.shownURL {
+            upgrade?.cancel()
+            if let ready = decodeCache.result(for: url) { viewer.show(ready, for: url) }
+        }
         updateTitle()
     }
 
@@ -156,15 +166,18 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func decodeHigherResolution(_ url: URL, _ pixels: Int) {
-        resolutionGeneration += 1
-        let generation = resolutionGeneration
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        upgrade?.cancel()
+        let op = BlockOperation()
+        op.addExecutionBlock { [weak self, weak op] in
+            guard let op, !op.isCancelled else { return }
             let result = ImageDecoder().decode(url, maxPixelSize: pixels)
             DispatchQueue.main.async {
-                guard let self, self.resolutionGeneration == generation, case .success(let image) = result else { return }
+                guard let self, !op.isCancelled, case .success(let image) = result else { return }
                 self.viewer.upgrade(image)
             }
         }
+        upgrade = op
+        upgrades.addOperation(op)
     }
 
     func windowWillClose(_ notification: Notification) { onClose?() }

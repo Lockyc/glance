@@ -58,6 +58,7 @@ final class ImageDecoderTests: XCTestCase {
         Fixtures.writeSVG(to: url)
         let image = try decoder.decode(url, maxPixelSize: 400).get()
         XCTAssertEqual(image.pixelSize, CGSize(width: 40, height: 20))
+        XCTAssertTrue(image.isVector)
         XCTAssertEqual(image.cgImage.width, 400)
         XCTAssertEqual(image.cgImage.height, 200)
     }

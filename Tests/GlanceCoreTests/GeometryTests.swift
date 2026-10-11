@@ -57,6 +57,19 @@ final class GeometryTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(zoomed.imageFrame.maxX, 500)
     }
 
+    func testDetailPixelsTrackTheFrameButStopAtNativeForRaster() {
+        XCTAssertEqual(large.detailPixels(isVector: false), 2000) // 1000 pt frame at 2x
+        let deep = large.zoomed(to: 32, about: CGPoint(x: 500, y: 375))
+        XCTAssertEqual(deep.detailPixels(isVector: false), 4000, "never more than the file holds")
+    }
+
+    func testDetailPixelsForVectorStopAtACeiling() {
+        let svg = Viewport.fit(imageSize: CGSize(width: 1000, height: 500), viewSize: CGSize(width: 1000, height: 750), backingScale: 2)
+            .zoomed(to: 32, about: CGPoint(x: 500, y: 375))
+        XCTAssertEqual(svg.detailPixels(isVector: true), Viewport.vectorPixelCeiling)
+        XCTAssertLessThanOrEqual(Viewport.vectorPixelCeiling, 8192)
+    }
+
     func testTitle() {
         XCTAssertEqual(ViewerTitle.text(fileName: "a.jpg", index: 11, count: 340, pixelSize: CGSize(width: 4032, height: 3024)),
                        "a.jpg — 12 / 340 — 4032×3024")

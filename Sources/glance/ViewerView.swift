@@ -97,7 +97,7 @@ final class ViewerView: NSView, ZoomActions {
         imageLayer.magnificationFilter = viewport.scale >= 2 ? .nearest : .linear
         CATransaction.commit()
 
-        let needed = Int((max(viewport.imageFrame.width, viewport.imageFrame.height) * backingScale).rounded(.up))
+        let needed = viewport.detailPixels(isVector: image.isVector)
         guard !image.isAnimated, needed > requestedPixels + requestedPixels / 20 else { return }
         requestedPixels = needed
         resolutionWork?.cancel()
