@@ -4,6 +4,9 @@ links:
   - rel: see-also
     to: README.md
     note: human-facing counterpart — what glance is and how to build it
+  - rel: see-also
+    to: docs/FOLLOWUPS.md
+    note: deferred work — what is next
 ---
 # glance
 
@@ -11,15 +14,18 @@ A native macOS (14+) image viewer: ←/→ through the current folder, a thumbna
 hover-enlarge preview, zoom/pan/fullscreen, and the default handler for every image type
 except PDF. One Swift package, no Xcode project, no third-party dependencies.
 
+**What's next:** `docs/FOLLOWUPS.md` — deliberately deferred work.
+
 ## Layout
 
 ```
 Package.swift
 VERSION                  # the one version source
-justfile                 # test / bench / gate
+justfile                 # recipes: `just` lists them
 Sources/GlanceCore/      # all logic — unit-tested
 Sources/glance/          # the AppKit shell (executable)
-Resources/               # Info.plist template for the bundle
+Resources/Info.plist     # bundle template; `just bundle` fills its version (from VERSION)
+                         # and document types (from `glance --list-types`) — never hand-edit them
 Tests/GlanceCoreTests/
 ```
 
@@ -36,6 +42,10 @@ thin. Anything testable without a window belongs in `GlanceCore`.
 `main` + `dev`. All work commits to `dev` and is pushed immediately; `main` advances only by a
 fast-forward to `dev` at release. `VERSION` is the single version source; tags are
 `v<VERSION>`, each with a GitHub release carrying notes.
+
+Cutting a release: bump `VERSION` on `dev`, curate `README.md`, `just gate`, fast-forward `main`
+to `dev` and push, tag `v<VERSION>` and push the tag, then `just bundle`, zip `.build/glance.app`
+with `ditto -c -k --keepParent`, and `gh release create` with the zip and notes.
 
 ## Build & test
 
