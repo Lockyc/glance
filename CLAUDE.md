@@ -26,7 +26,8 @@ Sources/GlanceCore/      # all logic — unit-tested
 Sources/glance/          # the AppKit shell (executable)
 Resources/Info.plist     # bundle template; `just bundle` fills its version (from VERSION)
                          # and document types (from `glance --list-types`) — never hand-edit them
-Tests/GlanceCoreTests/
+Tests/GlanceCoreTests/   # unit tests for GlanceCore
+Tests/glanceTests/       # the shell, driven with synthetic key and mouse events
 ```
 
 Logic lives in `GlanceCore` and is unit-tested; `Sources/glance` is the AppKit shell and stays
