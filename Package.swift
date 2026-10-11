@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     targets: [
         .target(name: "GlanceCore"),
+        .executableTarget(name: "glance", dependencies: ["GlanceCore"]),
         .testTarget(name: "GlanceCoreTests", dependencies: ["GlanceCore"]),
     ],
     swiftLanguageModes: [.v5]

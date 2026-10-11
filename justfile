@@ -18,3 +18,33 @@ test:
 # Run the latency benchmarks (skipped in plain `test`)
 bench:
     GLANCE_BENCH=1 swift test --filter BenchmarkTests
+
+# Build the release binary
+build:
+    swift build -c release
+
+# Assemble .build/glance.app (version from VERSION, document types from --list-types)
+bundle: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    rm -rf "{{app}}"
+    mkdir -p "{{app}}/Contents/MacOS" "{{app}}/Contents/Resources"
+    cp .build/release/glance "{{app}}/Contents/MacOS/glance"
+    plist="{{app}}/Contents/Info.plist"
+    cp Resources/Info.plist "$plist"
+    plutil -replace CFBundleShortVersionString -string "{{version}}" "$plist"
+    plutil -replace CFBundleVersion -string "{{version}}" "$plist"
+    for t in $(.build/release/glance --list-types); do
+        plutil -insert CFBundleDocumentTypes.0.LSItemContentTypes -string "$t" -append "$plist"
+    done
+    codesign --force --sign - "{{app}}"
+
+# Build and open glance on the given files/folders
+run *paths: bundle
+    open -a "$PWD/{{app}}" {{paths}}
+
+# Install to /Applications and register with Launch Services
+install: bundle
+    rm -rf /Applications/glance.app
+    cp -R "{{app}}" /Applications/glance.app
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/glance.app
