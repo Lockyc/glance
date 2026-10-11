@@ -60,8 +60,12 @@ public final class FolderModel {
         onChange?(.current)
     }
 
+    /// A file that arrived since the last scan (opened before the watcher's debounce fires)
+    /// triggers a rescan rather than being ignored.
     public func select(_ url: URL) {
-        if let index = files.firstIndex(of: url.resolvingSymlinksInPath()) { select(index) }
+        let url = url.resolvingSymlinksInPath()
+        if !files.contains(url) { try? rescan() }
+        if let index = files.firstIndex(of: url) { select(index) }
     }
 
     /// Keeps the current file if it survived; otherwise the file that took its place, or the new last.

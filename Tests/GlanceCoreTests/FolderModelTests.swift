@@ -87,6 +87,13 @@ final class FolderModelTests: XCTestCase {
         XCTAssertNil(m.current)
     }
 
+    func testSelectingAFileAddedSinceTheLastScanSelectsIt() throws {
+        let m = try model(["a.jpg"], current: "a.jpg")
+        Fixtures.touch(["b.jpg"], in: m.folder)
+        m.select(m.folder.appendingPathComponent("b.jpg"))
+        XCTAssertEqual(m.current?.lastPathComponent, "b.jpg")
+    }
+
     func testRescanPicksUpNewFiles() throws {
         let m = try model(["a.jpg"], current: "a.jpg")
         Fixtures.touch(["b.jpg"], in: m.folder)
