@@ -12,6 +12,10 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
     private let scrollView = NSScrollView()
     private let collectionView = GridCollectionView()
     private let layout = NSCollectionViewFlowLayout()
+    private let preview = HoverPreviewView()
+    private var hoverTimer: Timer?
+    private var hoveredIndex: Int?
+    private var previewRequest: Operation?
 
     init(model: FolderModel, thumbnails: ThumbnailService) {
         self.model = model
@@ -54,6 +58,10 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
         scrollView.hasVerticalScroller = true
         scrollView.autoresizingMask = [.width, .height]
         root.addSubview(scrollView)
+        root.addSubview(preview)
+        scrollView.addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil))
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(self, selector: #selector(hidePreview), name: NSView.boundsDidChangeNotification, object: scrollView.contentView)
         view = root
         applyTileSize()
     }
@@ -64,12 +72,14 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
     }
 
     private func applyTileSize() {
+        hidePreview()
         layout.itemSize = NSSize(width: tileSide, height: tileSide + ThumbnailItem.captionHeight)
         collectionView.reloadData()
         reveal(model.currentIndex)
     }
 
     func reload() {
+        hidePreview()
         collectionView.reloadData()
         reveal(model.currentIndex)
     }
@@ -93,4 +103,41 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
 
     @objc func zoomIn(_ sender: Any?) { tileSide *= 1.25 }
     @objc func zoomOut(_ sender: Any?) { tileSide /= 1.25 }
+
+    override func mouseMoved(with event: NSEvent) {
+        let index = collectionView.indexPathForItem(at: collectionView.convert(event.locationInWindow, from: nil))?.item
+        guard index != hoveredIndex else { return }
+        hidePreview()
+        hoveredIndex = index
+        guard let index else { return }
+        hoverTimer = Timer.scheduledTimer(withTimeInterval: HoverPreview.delay, repeats: false) { [weak self] _ in
+            self?.showPreview(index)
+        }
+    }
+
+    override func mouseExited(with event: NSEvent) { hidePreview() }
+
+    private func showPreview(_ index: Int) {
+        guard model.files.indices.contains(index),
+              let item = collectionView.item(at: IndexPath(item: index, section: 0)) as? ThumbnailItem else { return }
+        let side = HoverPreview.side(tileSide: tileSide)
+        let tile = view.convert(item.imageRect, from: item.view)
+        let aspectSource = item.image.map { CGSize(width: $0.width, height: $0.height) } ?? CGSize(width: 1, height: 1)
+        preview.show(item.image, frame: HoverPreview.frame(around: tile, imageSize: aspectSource, side: side, bounds: view.bounds.insetBy(dx: 8, dy: 8)))
+        let pixels = Int((side * backingScale).rounded(.up))
+        previewRequest = thumbnails.request(model.files[index], pixelSize: pixels) { [weak self] result in
+            guard let self, self.hoveredIndex == index, case .success(let image) = result else { return }
+            self.preview.update(image)
+        }
+    }
+
+    /// Also clears `hoveredIndex`, so after a scroll the next mouse move re-arms the preview.
+    @objc private func hidePreview() {
+        hoverTimer?.invalidate()
+        hoverTimer = nil
+        previewRequest?.cancel()
+        previewRequest = nil
+        hoveredIndex = nil
+        preview.hide()
+    }
 }
