@@ -125,7 +125,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             return
         }
         decodeCache.focus(on: index, in: model.files)
-        if let ready = decodeCache.result(for: url) { viewer.show(ready, for: url) }
+        // Only a change of file re-shows; a list change around the same file keeps its zoom.
+        if url != viewer.shownURL, let ready = decodeCache.result(for: url) { viewer.show(ready, for: url) }
         updateTitle()
     }
 

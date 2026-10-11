@@ -13,7 +13,9 @@ final class ViewerView: NSView, ZoomActions {
     private let imageLayer = CALayer()
     private let message = NSTextField(labelWithString: "")
     private var image: DecodedImage?
-    private var viewport: Viewport?
+    /// The file on screen, image or message — `nil` for the empty and loading states.
+    private(set) var shownURL: URL?
+    private(set) var viewport: Viewport?
     private var shownPixels = 0
     private var requestedPixels = 0
     private var animationGeneration = 0
@@ -62,6 +64,7 @@ final class ViewerView: NSView, ZoomActions {
         case .failure:
             showMessage("Can't open \(url.lastPathComponent)")
         }
+        shownURL = url
     }
 
     func showEmpty() { showMessage("No images in this folder") }
@@ -78,6 +81,7 @@ final class ViewerView: NSView, ZoomActions {
     private func showMessage(_ text: String) {
         stopAnimation()
         image = nil
+        shownURL = nil
         viewport = nil
         imageLayer.contents = nil
         imageLayer.isHidden = true

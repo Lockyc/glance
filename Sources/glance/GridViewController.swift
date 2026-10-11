@@ -16,6 +16,8 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
     private var hoverTimer: Timer?
     private var hoveredIndex: Int?
     private var previewRequest: Operation?
+    /// The file list as last loaded into the collection view, to map old selections to files.
+    private var listed: [URL] = []
 
     init(model: FolderModel, thumbnails: ThumbnailService) {
         self.model = model
@@ -74,14 +76,24 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
     private func applyTileSize() {
         hidePreview()
         layout.itemSize = NSSize(width: tileSide, height: tileSide + ThumbnailItem.captionHeight)
+        listed = model.files
         collectionView.reloadData()
         reveal(model.currentIndex)
     }
 
+    /// After the folder changed: the selection follows its file and the scroll position stays put,
+    /// so files arriving mid-browse never yank the grid.
     func reload() {
         hidePreview()
+        let selected = collectionView.selectionIndexPaths.compactMap { listed.indices.contains($0.item) ? listed[$0.item] : nil }
+        let origin = scrollView.contentView.bounds.origin
+        listed = model.files
         collectionView.reloadData()
-        reveal(model.currentIndex)
+        let kept = selected.compactMap { model.files.firstIndex(of: $0) }
+        let fallback = model.currentIndex.map { [$0] } ?? []
+        collectionView.selectionIndexPaths = Set((kept.isEmpty ? fallback : kept).map { IndexPath(item: $0, section: 0) })
+        scrollView.contentView.scroll(to: origin)
+        scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
     func reveal(_ index: Int?) {
