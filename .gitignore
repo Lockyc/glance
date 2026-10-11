@@ -1,0 +1,6 @@
+.superpowers/
+docs/superpowers/
+.claude/worktrees/
+.build/
+*.xcodeproj/xcuserdata/
+DerivedData/

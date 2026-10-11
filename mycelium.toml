@@ -1,0 +1,17 @@
+name    = "glance"
+summary = "Fast, keyboard-driven macOS image viewer: instant arrow-key navigation through a folder, a full-window thumbnail grid with hover-enlarge preview, and the default handler for every image type except PDF."
+kind    = "app"
+status  = "active"
+tags    = ["image-viewer", "macos", "thumbnails"]
+stack   = ["swift", "appkit"]
+
+[fleet]
+exempt      = ["ci"]
+exempt_note = "macOS-only: the local `just gate` covers the one platform it ships on"
+
+[github]
+topics_extra = ["appkit", "imageio", "image-viewer", "photo-viewer", "svg", "heic", "raw"]
+
+[[provides]]
+name    = "image-viewing"
+summary = "Default macOS viewer for every image type except PDF, with folder navigation and a thumbnail grid"
