@@ -111,12 +111,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         let folder = model.folder
         let keep = scanned ? nil : model.current
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let files = try? FolderModel.listing(folder, including: keep)
+            let listing = try? FolderModel.listing(folder, including: keep)
             DispatchQueue.main.async {
                 guard let self, generation == self.scanGeneration else { return }
                 let wasScanned = self.scanned
                 self.scanned = true
-                if let files { self.model.replaceFiles(files) }
+                if let listing { self.model.replaceFiles(listing.files, dates: listing.dates) }
                 if !wasScanned, self.model.files.isEmpty { self.modelChanged(.files) }
                 self.decodeCache.revalidate()
             }

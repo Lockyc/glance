@@ -16,6 +16,17 @@ enum Fixtures {
         }
     }
 
+    /// An empty file at `relativePath` (intermediate folders created) with the given creation date.
+    static func file(_ relativePath: String, in dir: URL, created: Date) {
+        let url = dir.appendingPathComponent(relativePath)
+        try! FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        FileManager.default.createFile(atPath: url.path, contents: Data())
+        try! FileManager.default.setAttributes([.creationDate: created], ofItemAtPath: url.path)
+    }
+
+    /// 2025-03-10 00:00 UTC plus `days`.
+    static func day(_ days: Int) -> Date { Date(timeIntervalSince1970: 1_741_564_800 + Double(days) * 86_400) }
+
     /// A gradient so encoders can't collapse it to a trivial file.
     static func testImage(width: Int, height: Int) -> CGImage {
         let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,

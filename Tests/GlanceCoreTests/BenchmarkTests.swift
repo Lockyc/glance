@@ -38,4 +38,15 @@ final class BenchmarkTests: XCTestCase {
         let t = median(3) { _ = try? FolderModel.scan(dir) }
         XCTAssertLessThan(t, 0.300, "median \(Int(t * 1000)) ms")
     }
+
+    func testTreeWalkOf25000FilesIn36FoldersUnder1500ms() {
+        let root = Fixtures.tempDir()
+        for month in 0..<36 {
+            let dir = root.appendingPathComponent("y\(month / 12)/m\(month % 12)", isDirectory: true)
+            try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            Fixtures.touch((0..<695).map { "CleanShot \(month)-\($0).png" }, in: dir)
+        }
+        let t = median(3) { _ = try? FolderModel.scanTree(root, excluded: []) }
+        XCTAssertLessThan(t, 1.5, "median \(Int(t * 1000)) ms")
+    }
 }
