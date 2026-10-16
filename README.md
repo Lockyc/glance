@@ -12,6 +12,9 @@ Preview. Turn on View → Include Subfolders for a folder and everything under i
 stream, oldest first, with month headers in the grid — a whole screenshots archive browsed in
 order.
 
+If you've used Xee, it's the same idea: arrow through a folder, as fast as the disk allows.
+glance is free and open source.
+
 ![glance showing the Carina Nebula, image 5 of 24 in its folder](docs/screenshots/viewer.png)
 
 ![glance's thumbnail grid, with the hovered Hourglass Nebula enlarged](docs/screenshots/grid.png)
