@@ -51,7 +51,7 @@ tree, at that file. Subfolders can be left out from View → Subfolders or glanc
 
 | Key | Action |
 |---|---|
-| ← / → | Previous / next image (across months) |
+| ← / → | Select the previous / next tile (across months) |
 | ↑ / ↓ | Move the selection by row |
 | Return or click | Open the image |
 | Esc, G or Space | Back to the viewer |
