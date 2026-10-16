@@ -78,6 +78,17 @@ public final class FolderModel {
             .sorted(by: naturalOrder)
     }
 
+    /// `folder`'s own non-hidden subfolder names in Finder's natural order — View → Subfolders.
+    /// Blocking I/O: call off the main thread.
+    public static func subfolders(of folder: URL) -> [String] {
+        let children = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.isDirectoryKey],
+                                                                      options: [.skipsHiddenFiles])) ?? []
+        return children
+            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            .map(\.lastPathComponent)
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
     /// Every viewable image under `root`, oldest first (creation date, else modification date;
     /// ties by natural name, then path). Hidden entries, excluded folders and symlinked folders
     /// are skipped. Only an unreadable `root` throws; an unreadable subfolder is left out.

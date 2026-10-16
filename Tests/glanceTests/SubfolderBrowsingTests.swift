@@ -143,6 +143,15 @@ final class SubfolderBrowsingTests: XCTestCase {
         XCTAssertEqual(menu.items.map(\.state), [.on, .off])
     }
 
+    func testANewTopLevelFolderJoinsTheSubfoldersMenu() {
+        delegate.openURL(root.appendingPathComponent("d.png"))
+        spin { self.names.count == 4 }
+        write("2026/e.png", day: 50)
+        spin { self.names.count == 5 }
+        spin { self.controller.subfolders().count == 3 }
+        XCTAssertEqual(controller.subfolders(), ["2025", "2026", "timeline"])
+    }
+
     func testSubfoldersMenuExplainsItselfWhenOff() {
         delegate.openURL(root.appendingPathComponent("timeline/t.png"))
         let menu = NSMenu()

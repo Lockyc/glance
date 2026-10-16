@@ -28,6 +28,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private var scanned = false
     private var scanning = false
     private var pendingChange: TreeWatcher.Change?
+    /// The root's top-level folders, read by the scan so View → Subfolders never touches the disk.
+    private var rootFolders: [String] = []
 
     init(model: FolderModel, thumbnails: ThumbnailService, startInGrid: Bool, roots: SubfolderRoots = .shared, landing: URL? = nil) {
         // Locals, not self.viewer/self.grid: self can't be read before super.init.
@@ -135,6 +137,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         let keep = scanned ? nil : model.current
         var dirs: Set<URL>?
         if scanned, case .directories(let changed) = change, case .tree = scope { dirs = changed }
+        // The top-level folder set changes only with the root itself, so a pass that re-reads
+        // deeper folders keeps the names it has.
+        let readFolders = scope != .flat && (dirs?.contains { SubfolderRoots.relativePath(of: $0, in: folder) == "" } ?? true)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let listing: FolderModel.Listing?
             if let dirs, case .tree(let excluded) = scope {
@@ -142,6 +147,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             } else {
                 listing = try? FolderModel.listing(folder, scope: scope, including: keep)
             }
+            let folders = readFolders ? FolderModel.subfolders(of: folder) : nil
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.scanning = false
@@ -149,6 +155,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
                 guard generation == self.scanGeneration else { return }
                 let first = !self.scanned
                 self.scanned = true
+                if let folders { self.rootFolders = folders }
                 if let listing { self.model.replaceFiles(listing.files, dates: listing.dates) }
                 if first, let landing = self.landing { self.land(at: landing) }
                 if first, self.model.files.isEmpty { self.modelChanged(.files) }
@@ -176,15 +183,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         roots.setExcluded(name, !excluded.contains(name), in: model.folder)
     }
 
-    /// The root's top-level folders, for View → Subfolders.
-    func subfolders() -> [String] {
-        let children = (try? FileManager.default.contentsOfDirectory(at: model.folder, includingPropertiesForKeys: [.isDirectoryKey],
-                                                                      options: [.skipsHiddenFiles])) ?? []
-        return children
-            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-            .map(\.lastPathComponent)
-            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-    }
+    /// The root's top-level folders, for View → Subfolders, as the last scan found them.
+    func subfolders() -> [String] { rootFolders }
 
     @objc private func rootsChanged() {
         let scope: FolderModel.Scope = roots.root(at: model.folder).map { .tree(excluded: Set($0.excluded)) } ?? .flat
