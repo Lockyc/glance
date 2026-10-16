@@ -10,6 +10,10 @@ the rest of its folder; a full-window thumbnail grid, with an enlarged preview o
 in for jumping around. It opens every image format macOS can decode, plus SVG. PDFs stay with
 Preview.
 
+![glance showing the Carina Nebula, image 5 of 24 in its folder](docs/screenshots/viewer.png)
+
+![glance's thumbnail grid, with the hovered Hourglass Nebula enlarged](docs/screenshots/grid.png)
+
 ## Install
 
 Needs macOS 14+ and the Xcode command-line tools (Swift 6) plus [`just`](https://github.com/casey/just).
