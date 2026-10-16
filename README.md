@@ -8,7 +8,9 @@
 A fast, keyboard-driven image viewer for macOS. Open any image and ←/→ step instantly through
 the rest of its folder; a full-window thumbnail grid, with an enlarged preview on hover, swaps
 in for jumping around. It opens every image format macOS can decode, plus SVG. PDFs stay with
-Preview.
+Preview. Turn on View → Include Subfolders for a folder and everything under it becomes one
+stream, oldest first, with month headers in the grid — a whole screenshots archive browsed in
+order.
 
 ![glance showing the Carina Nebula, image 5 of 24 in its folder](docs/screenshots/viewer.png)
 
@@ -25,7 +27,8 @@ just make-default   # makes glance the default viewer for every image type excep
 ```
 
 Opening a file shows it in its folder; opening a folder (or dropping one on the Dock icon)
-opens the grid.
+opens the grid. A file anywhere inside a folder with Include Subfolders on opens that whole
+tree, at that file. Subfolders can be left out from View → Subfolders or glance → Settings….
 
 ## Keys
 
@@ -48,7 +51,8 @@ opens the grid.
 
 | Key | Action |
 |---|---|
-| Arrow keys | Move the selection |
+| ← / → | Previous / next image (across months) |
+| ↑ / ↓ | Move the selection by row |
 | Return or click | Open the image |
 | Esc, G or Space | Back to the viewer |
 | ⌘+ / ⌘− | Larger / smaller tiles (remembered) |

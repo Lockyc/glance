@@ -10,7 +10,8 @@ links:
 ---
 # glance
 
-A native macOS (14+) image viewer: ←/→ through the current folder, a thumbnail grid with
+A native macOS (14+) image viewer: ←/→ through the current folder (or, for a folder with
+Include Subfolders on, its whole tree oldest-first), a thumbnail grid with
 hover-enlarge preview, zoom/pan/fullscreen, and the default handler for every image type
 except PDF. One Swift package, no Xcode project, no third-party dependencies.
 
@@ -37,6 +38,8 @@ thin. Anything testable without a window belongs in `GlanceCore`.
 
 - PDF is never listed or claimed — every type set excludes types conforming to `UTType.pdf`.
 - No decoding on the main thread; failures render in place, never as a modal.
+- A tree's `FolderModel.files` and `dates` stay parallel (the grid's month sections index
+  both): pass a tree's dates to every `replaceFiles(_:dates:)`; a flat folder has none.
 
 ## Branches and releases
 
