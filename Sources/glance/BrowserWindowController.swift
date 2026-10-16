@@ -10,7 +10,6 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let decodeCache: DecodeCache
     private let viewer: ViewerView
     private let grid: GridViewController
-    private var watcher: TreeWatcher?
     private var showingGrid = false
     /// Full-detail re-decodes for zoom run one at a time; a newer request or a change of file cancels the last.
     private let upgrades: OperationQueue = {
@@ -20,14 +19,23 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         return queue
     }()
     private var upgrade: Operation?
+    private let roots: SubfolderRoots
+    /// A folder opened (not a file) inside a root: the first listing lands on its newest image.
+    private let landing: URL?
+    private var watcher: TreeWatcher?
+    /// Bumped on a scope change so a listing of the old scope is dropped when it returns.
     private var scanGeneration = 0
     private var scanned = false
+    private var scanning = false
+    private var pendingChange: TreeWatcher.Change?
 
-    init(model: FolderModel, thumbnails: ThumbnailService, startInGrid: Bool) {
+    init(model: FolderModel, thumbnails: ThumbnailService, startInGrid: Bool, roots: SubfolderRoots = .shared, landing: URL? = nil) {
         // Locals, not self.viewer/self.grid: self can't be read before super.init.
         let viewer = ViewerView()
         let grid = GridViewController(model: model, thumbnails: thumbnails)
         self.model = model
+        self.roots = roots
+        self.landing = landing
         self.viewer = viewer
         self.grid = grid
         decodeCache = DecodeCache(decoder: ImageDecoder(), maxPixelSize: Self.screenPixels())
@@ -61,11 +69,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             self.updateTitle()
         }
         model.onChange = { [weak self] in self?.modelChanged($0) }
-        watcher = TreeWatcher(folder: model.folder, recursive: false) { [weak self] _ in self?.rescan() }
+        watch()
+        NotificationCenter.default.addObserver(self, selector: #selector(rootsChanged), name: SubfolderRoots.didChange, object: roots)
 
         modelChanged(.files)
         startInGrid ? showGrid() : showViewer()
-        rescan()
+        request(.everything)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
@@ -102,25 +111,89 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: Model
 
-    /// Lists the folder off the main thread (a network volume can take seconds), then hands the
-    /// result to the model. The first scan keeps the file the window was opened on, even if it
-    /// is not an image; a newer scan supersedes an older one still in flight.
-    private func rescan() {
-        scanGeneration += 1
+    var isRoot: Bool { model.scope != .flat }
+
+    private func watch() {
+        watcher = TreeWatcher(folder: model.folder, recursive: isRoot) { [weak self] in self?.request($0) }
+    }
+
+    private func request(_ change: TreeWatcher.Change) {
+        pendingChange = pendingChange.map { $0.merged(with: change) } ?? change
+        runScan()
+    }
+
+    /// One listing at a time, off the main thread (a network volume can take seconds); changes
+    /// arriving meanwhile merge and run next. A tree re-reads only the changed folders once it
+    /// has been walked. The first listing keeps the file the window was opened on, even if it is
+    /// not an image.
+    private func runScan() {
+        guard !scanning, let change = pendingChange else { return }
+        pendingChange = nil
+        scanning = true
         let generation = scanGeneration
-        let folder = model.folder
+        let folder = model.folder, scope = model.scope, snapshot = model.listing
         let keep = scanned ? nil : model.current
+        var dirs: Set<URL>?
+        if scanned, case .directories(let changed) = change, case .tree = scope { dirs = changed }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let listing = try? FolderModel.listing(folder, including: keep)
+            let listing: FolderModel.Listing?
+            if let dirs, case .tree(let excluded) = scope {
+                listing = FolderModel.relist(snapshot, root: folder, excluded: excluded, changed: dirs)
+            } else {
+                listing = try? FolderModel.listing(folder, scope: scope, including: keep)
+            }
             DispatchQueue.main.async {
-                guard let self, generation == self.scanGeneration else { return }
-                let wasScanned = self.scanned
+                guard let self else { return }
+                self.scanning = false
+                defer { self.runScan() }
+                guard generation == self.scanGeneration else { return }
+                let first = !self.scanned
                 self.scanned = true
                 if let listing { self.model.replaceFiles(listing.files, dates: listing.dates) }
-                if !wasScanned, self.model.files.isEmpty { self.modelChanged(.files) }
+                if first, let landing = self.landing { self.land(at: landing) }
+                if first, self.model.files.isEmpty { self.modelChanged(.files) }
                 self.decodeCache.revalidate()
             }
         }
+    }
+
+    /// Selects the newest image under `folder` (the list is oldest first).
+    func land(at folder: URL) {
+        let prefix = folder.path + "/"
+        guard let index = model.files.lastIndex(where: { $0.path.hasPrefix(prefix) }) else { return }
+        model.select(index)
+        if showingGrid { grid.reveal(index) }
+    }
+
+    // MARK: Subfolders
+
+    @objc func toggleSubfolders(_ sender: Any?) {
+        isRoot ? roots.disable(model.folder) : roots.enable(model.folder)
+    }
+
+    @objc func toggleExcludedSubfolder(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String, case .tree(let excluded) = model.scope else { return }
+        roots.setExcluded(name, !excluded.contains(name), in: model.folder)
+    }
+
+    /// The root's top-level folders, for View → Subfolders.
+    func subfolders() -> [String] {
+        let children = (try? FileManager.default.contentsOfDirectory(at: model.folder, includingPropertiesForKeys: [.isDirectoryKey],
+                                                                      options: [.skipsHiddenFiles])) ?? []
+        return children
+            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            .map(\.lastPathComponent)
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    @objc private func rootsChanged() {
+        let scope: FolderModel.Scope = roots.root(at: model.folder).map { .tree(excluded: Set($0.excluded)) } ?? .flat
+        guard scope != model.scope else { return }
+        let wasRoot = isRoot
+        model.setScope(scope)
+        scanGeneration += 1
+        if wasRoot != isRoot { watch() }
+        request(.everything)
     }
 
     private func modelChanged(_ change: FolderModel.Change) {
@@ -181,4 +254,20 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) { onClose?() }
+}
+
+extension BrowserWindowController: NSMenuItemValidation {
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        switch item.action {
+        case #selector(toggleSubfolders(_:)):
+            item.state = isRoot ? .on : .off
+        case #selector(toggleExcludedSubfolder(_:)):
+            if case .tree(let excluded) = model.scope, let name = item.representedObject as? String {
+                item.state = excluded.contains(name) ? .off : .on
+            }
+        default:
+            break
+        }
+        return true
+    }
 }

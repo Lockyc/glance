@@ -2,8 +2,14 @@ import AppKit
 import GlanceCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var controllers: [BrowserWindowController] = []
+    private(set) var controllers: [BrowserWindowController] = []
     private let thumbnails = ThumbnailService()
+    private let roots: SubfolderRoots
+
+    init(roots: SubfolderRoots = .shared) {
+        self.roots = roots
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.make()
@@ -38,23 +44,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// A file opens its folder at that file; a folder opens in the grid. A folder that already
+    /// A file opens its folder at that file; a folder opens in the grid. Anything inside a root
+    /// opens the root's window — a folder there lands on its newest image. A folder that already
     /// has a window reuses it.
     func openURL(_ url: URL) {
         let isFolder = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
-        let folder = (isFolder ? url : url.deletingLastPathComponent()).resolvingSymlinksInPath()
+        let opened = (isFolder ? url : url.deletingLastPathComponent()).resolvingSymlinksInPath()
+        let root = roots.root(covering: isFolder ? opened : FolderModel.canonical(url))
+        let folder = root?.url.resolvingSymlinksInPath() ?? opened
         let file = isFolder ? nil : url
+        let landing = isFolder && root != nil ? opened : nil
 
-        if let existing = controllers.first(where: { $0.model.folder == folder }) {
+        if let existing = controllers.first(where: { $0.model.folder.path == folder.path }) {
             if let file { existing.model.select(file) }
+            if let landing { existing.land(at: landing) }
             isFolder ? existing.showGrid() : existing.showViewer()
             existing.showWindow(nil)
             return
         }
 
         // Opens on the one file at once; the window lists the folder in the background.
-        let model = FolderModel(folder: folder, files: file.map { [FolderModel.canonical($0)] } ?? [], current: file)
-        let controller = BrowserWindowController(model: model, thumbnails: thumbnails, startInGrid: isFolder)
+        // A tree's files and dates stay parallel even before the first listing arrives.
+        let scope: FolderModel.Scope = root.map { .tree(excluded: Set($0.excluded)) } ?? .flat
+        let seeded = file.map { [FolderModel.canonical($0)] } ?? []
+        let model = FolderModel(folder: folder, files: seeded, current: file, scope: scope,
+                                dates: scope == .flat ? [] : seeded.map { _ in .distantPast })
+        let controller = BrowserWindowController(model: model, thumbnails: thumbnails, startInGrid: isFolder,
+                                                 roots: roots, landing: landing)
         controller.onClose = { [weak self, weak controller] in self?.controllers.removeAll { $0 === controller } }
         controllers.append(controller)
         controller.showWindow(nil)
