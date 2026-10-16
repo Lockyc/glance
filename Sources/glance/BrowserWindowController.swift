@@ -10,7 +10,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let decodeCache: DecodeCache
     private let viewer: ViewerView
     private let grid: GridViewController
-    private var watcher: FolderWatcher?
+    private var watcher: TreeWatcher?
     private var showingGrid = false
     /// Full-detail re-decodes for zoom run one at a time; a newer request or a change of file cancels the last.
     private let upgrades: OperationQueue = {
@@ -61,7 +61,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             self.updateTitle()
         }
         model.onChange = { [weak self] in self?.modelChanged($0) }
-        watcher = FolderWatcher(folder: model.folder) { [weak self] in self?.rescan() }
+        watcher = TreeWatcher(folder: model.folder, recursive: false) { [weak self] _ in self?.rescan() }
 
         modelChanged(.files)
         startInGrid ? showGrid() : showViewer()
