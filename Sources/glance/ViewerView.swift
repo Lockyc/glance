@@ -50,6 +50,7 @@ final class ViewerView: NSView, ZoomActions {
 
     func show(_ result: Result<DecodedImage, DecodeError>, for url: URL) {
         stopAnimation()
+        resolutionWork?.cancel()
         switch result {
         case .success(let decoded):
             image = decoded
@@ -80,6 +81,7 @@ final class ViewerView: NSView, ZoomActions {
 
     private func showMessage(_ text: String) {
         stopAnimation()
+        resolutionWork?.cancel()
         image = nil
         shownURL = nil
         viewport = nil
