@@ -96,7 +96,7 @@ public final class FolderModel {
         var entries = zip(listing.files, listing.dates).map(Entry.init)
         for dir in changed.map({ URL(fileURLWithPath: $0.path, isDirectory: true) }).sorted(by: { $0.path.count < $1.path.count }) {
             guard let relative = SubfolderRoots.relativePath(of: dir, in: root),
-                  !excluded.contains(where: { relative == $0 || relative.hasPrefix($0 + "/") }),
+                  !SubfolderRoots.isExcluded(relative, by: excluded),
                   !relative.split(separator: "/").contains(where: { $0.hasPrefix(".") }) else { continue }
             let prefix = dir.path + "/"
             let isUnder = { (entry: Entry) in entry.path.hasPrefix(prefix) }
@@ -104,8 +104,7 @@ public final class FolderModel {
                 entries.removeAll(where: isUnder)
                 continue
             }
-            let join = { (name: String) in relative.isEmpty ? name : relative + "/" + name }
-            let present = Set(folders.filter { !excluded.contains(join($0)) })
+            let present = Set(folders.filter { !excluded.contains(child(of: relative, $0)) })
             var held = Set<String>()
             // Own images go (re-added below); images in folders that vanished go; the rest stay.
             entries.removeAll { entry in
@@ -116,7 +115,7 @@ public final class FolderModel {
             }
             entries += images
             for name in present.subtracting(held) {
-                try? walk(dir.appendingPathComponent(name), relative: join(name), excluded: excluded, into: &entries)
+                try? walk(dir.appendingPathComponent(name), relative: child(of: relative, name), excluded: excluded, into: &entries)
             }
         }
         return sorted(entries)
@@ -128,11 +127,16 @@ public final class FolderModel {
         return rest.firstIndex(of: "/").map { String(rest[..<$0]) }
     }
 
+    /// A subfolder's path relative to the root, in the form `excluded` holds.
+    private static func child(of relative: String, _ name: String) -> String {
+        relative.isEmpty ? name : relative + "/" + name
+    }
+
     static func walk(_ dir: URL, relative: String, excluded: Set<String>, into entries: inout [Entry]) throws {
         let (images, folders) = try read(dir)
         entries += images
         for name in folders {
-            let path = relative.isEmpty ? name : relative + "/" + name
+            let path = child(of: relative, name)
             guard !excluded.contains(path) else { continue }
             try? walk(dir.appendingPathComponent(name), relative: path, excluded: excluded, into: &entries)
         }

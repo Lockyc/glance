@@ -36,8 +36,13 @@ public final class SubfolderRoots {
     public func root(covering url: URL) -> Root? {
         roots.filter { root in
             guard let relative = Self.relativePath(of: url, in: root.url) else { return false }
-            return !root.excluded.contains { relative == $0 || relative.hasPrefix($0 + "/") }
+            return !Self.isExcluded(relative, by: root.excluded)
         }.max { $0.path.count < $1.path.count }
+    }
+
+    /// Whether the folder or file at `relative` is one of `excluded` or inside one.
+    public static func isExcluded(_ relative: String, by excluded: some Sequence<String>) -> Bool {
+        excluded.contains { relative == $0 || relative.hasPrefix($0 + "/") }
     }
 
     /// `url`'s path below `folder` ("" for the folder itself), or nil when it is not inside it.
