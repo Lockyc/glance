@@ -2,7 +2,7 @@
 type: roadmap
 links:
   - rel: see-also
-    to: ../CLAUDE.md
+    to: CLAUDE.md
     note: architecture and conventions
 ---
 # Follow-ups
