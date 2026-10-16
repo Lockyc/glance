@@ -132,6 +132,15 @@ final class FolderTreeTests: XCTestCase {
         XCTAssertEqual(relist(root, before, ["timeline/d", ""]), before)
     }
 
+    func testChangesInsideHiddenFoldersAreIgnoredLikeAFullScan() throws {
+        let root = Fixtures.tempDir()
+        Fixtures.file("a.png", in: root, created: Fixtures.day(0))
+        let before = try FolderModel.scanTree(root, excluded: ["timeline"])
+        Fixtures.file(".cache/thumb.png", in: root, created: Fixtures.day(1))
+        Fixtures.file(".cache/deeper/thumb2.png", in: root, created: Fixtures.day(2))
+        XCTAssertEqual(relist(root, before, [".cache", ".cache/deeper"]), try FolderModel.scanTree(root, excluded: ["timeline"]))
+    }
+
     /// CleanShot files a loose screenshot into its month folder: same file, new path, same date.
     func testFileMovedIntoASubfolderStaysCurrent() throws {
         let root = Fixtures.tempDir()

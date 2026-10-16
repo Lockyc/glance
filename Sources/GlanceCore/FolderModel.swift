@@ -89,13 +89,15 @@ public final class FolderModel {
 
     /// `listing` with the folders in `changed` re-read: each one's own images replaced, a subfolder
     /// that appeared walked whole, one that vanished dropped with everything under it. Folders
-    /// outside `root` or inside an excluded folder are ignored. Parents are handled before their
+    /// outside `root`, inside an excluded folder, or inside a hidden one (which `walk` never
+    /// enters) are ignored. Parents are handled before their
     /// children, so a new folder reported on both levels is not listed twice.
     public static func relist(_ listing: Listing, root: URL, excluded: Set<String>, changed: Set<URL>) -> Listing {
         var entries = zip(listing.files, listing.dates).map(Entry.init)
         for dir in changed.map({ URL(fileURLWithPath: $0.path, isDirectory: true) }).sorted(by: { $0.path.count < $1.path.count }) {
             guard let relative = SubfolderRoots.relativePath(of: dir, in: root),
-                  !excluded.contains(where: { relative == $0 || relative.hasPrefix($0 + "/") }) else { continue }
+                  !excluded.contains(where: { relative == $0 || relative.hasPrefix($0 + "/") }),
+                  !relative.split(separator: "/").contains(where: { $0.hasPrefix(".") }) else { continue }
             let prefix = dir.path + "/"
             let isUnder = { (entry: Entry) in entry.path.hasPrefix(prefix) }
             guard let (images, folders) = try? read(dir) else {
