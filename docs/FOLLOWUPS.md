@@ -26,3 +26,15 @@ Deliberately deferred work. Remove an entry when it ships.
 - **An explicitly opened non-image file** drops out of the list at the next folder scan.
 - **Animated images keep animating** while the grid is shown or the window is minimised.
 - **The thumbnail disk cache is never pruned** (`~/Library/Caches/glance/thumbnails`).
+- **Turning Include Subfolders off forgets the root's exclusions**, so off-then-on brings
+  `timeline/`-style folders back. Fix: an `enabled` flag on `SubfolderRoots.Root`, with Settings
+  showing disabled roots. Unlock: toggling a root off and on becoming a habit.
+- **Opening a subfolder before the root's first walk lands** (or an empty subfolder) shows the
+  tree's oldest image: `land(at:)` finds nothing and is not retried when the walk arrives.
+- **Turning Include Subfolders on, then opening a subfolder file before the walk lands**, briefly
+  shows only that file: `setScope` leaves `dates` empty, so `select(_:)`'s tree insert drops the
+  flat list.
+- **View → Subfolders reads the key window**, so with Settings in front it shows the "turn on"
+  hint instead of the browser window's folders. Fix: fall back to `NSApp.mainWindow`.
+- **A deleted or moved root keeps its last list**: the failed listing is ignored rather than
+  emptying the window (same as a flat folder today).
