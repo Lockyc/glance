@@ -16,8 +16,10 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
     private var hoverTimer: Timer?
     private var hoveredIndex: Int?
     private var previewRequest: Operation?
-    /// The file list as last loaded into the collection view, to map old selections to files.
+    /// The file list and its month sections as last loaded into the collection view; items and
+    /// old selections resolve against these, never against a model that may have moved on.
     private var listed: [URL] = []
+    private var sections = MonthSections(dates: [], count: 0)
 
     init(model: FolderModel, thumbnails: ThumbnailService) {
         self.model = model
@@ -49,12 +51,19 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
         layout.minimumInteritemSpacing = 12
         layout.minimumLineSpacing = 12
         layout.sectionInset = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        layout.sectionHeadersPinToVisibleBounds = true
         collectionView.collectionViewLayout = layout
         collectionView.dataSource = self
         collectionView.isSelectable = true
         collectionView.backgroundColors = [NSColor(white: 0.08, alpha: 1)]
         collectionView.register(ThumbnailItem.self, forItemWithIdentifier: ThumbnailItem.identifier)
-        collectionView.onActivate = { [weak self] in self?.onOpen?($0) }
+        collectionView.register(MonthHeaderView.self, forSupplementaryViewOfKind: NSCollectionView.elementKindSectionHeader,
+                                withIdentifier: MonthHeaderView.identifier)
+        collectionView.onActivate = { [weak self] path in
+            guard let self, let index = self.sections.index(for: path) else { return }
+            self.onOpen?(index)
+        }
+        collectionView.onStep = { [weak self] in self?.step($0) }
         collectionView.onExit = { [weak self] in self?.onExit?() }
         scrollView.documentView = collectionView
         scrollView.hasVerticalScroller = true
@@ -76,48 +85,72 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
     private func applyTileSize() {
         hidePreview()
         layout.itemSize = NSSize(width: tileSide, height: tileSide + ThumbnailItem.captionHeight)
-        listed = model.files
-        collectionView.reloadData()
+        load()
         reveal(model.currentIndex)
+    }
+
+    /// Snapshots the model into the collection view: files, month sections, header height.
+    private func load() {
+        listed = model.files
+        sections = MonthSections(dates: model.dates, count: model.files.count)
+        layout.headerReferenceSize = NSSize(width: 0, height: model.dates.isEmpty ? 0 : MonthHeaderView.height)
+        collectionView.reloadData()
     }
 
     /// After the folder changed: the selection follows its file and the scroll position stays put,
     /// so files arriving mid-browse never yank the grid.
     func reload() {
         hidePreview()
-        let selected = collectionView.selectionIndexPaths.compactMap { listed.indices.contains($0.item) ? listed[$0.item] : nil }
+        let selected = collectionView.selectionIndexPaths.compactMap(sections.index(for:)).compactMap { listed.indices.contains($0) ? listed[$0] : nil }
         let origin = scrollView.contentView.bounds.origin
-        listed = model.files
-        collectionView.reloadData()
+        load()
         let kept = selected.compactMap { model.files.firstIndex(of: $0) }
         let fallback = model.currentIndex.map { [$0] } ?? []
-        collectionView.selectionIndexPaths = Set((kept.isEmpty ? fallback : kept).map { IndexPath(item: $0, section: 0) })
+        collectionView.selectionIndexPaths = Set((kept.isEmpty ? fallback : kept).map(sections.indexPath(for:)))
         scrollView.contentView.scroll(to: origin)
         scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
     func reveal(_ index: Int?) {
-        guard let index, model.files.indices.contains(index) else { return }
-        let path = IndexPath(item: index, section: 0)
+        guard let index, listed.indices.contains(index) else { return }
+        let path = sections.indexPath(for: index)
         collectionView.selectionIndexPaths = [path]
         collectionView.scrollToItems(at: [path], scrollPosition: .centeredVertically)
     }
 
+    /// ←/→: the next or previous tile in the flat order, across month boundaries; stops at the ends.
+    private func step(_ delta: Int) {
+        guard !listed.isEmpty else { return }
+        let current = collectionView.selectionIndexPaths.first.flatMap(sections.index(for:)) ?? model.currentIndex ?? 0
+        let path = sections.indexPath(for: min(max(current + delta, 0), listed.count - 1))
+        collectionView.selectionIndexPaths = [path]
+        collectionView.scrollToItems(at: [path], scrollPosition: .nearestHorizontalEdge)
+    }
+
+    func numberOfSections(in collectionView: NSCollectionView) -> Int { sections.sections.count }
+
     func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
-        model.files.count
+        sections.sections[section].range.count
     }
 
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
         let item = collectionView.makeItem(withIdentifier: ThumbnailItem.identifier, for: indexPath) as! ThumbnailItem
-        item.configure(url: model.files[indexPath.item], pixelSize: thumbnailPixels, service: thumbnails)
+        item.configure(url: listed[sections.index(for: indexPath)!], pixelSize: thumbnailPixels, service: thumbnails)
         return item
+    }
+
+    func collectionView(_ collectionView: NSCollectionView, viewForSupplementaryElementOfKind kind: NSCollectionView.SupplementaryElementKind,
+                        at indexPath: IndexPath) -> NSView {
+        let header = collectionView.makeSupplementaryView(ofKind: kind, withIdentifier: MonthHeaderView.identifier, for: indexPath) as! MonthHeaderView
+        header.configure(sections.sections[indexPath.section].title)
+        return header
     }
 
     @objc func zoomIn(_ sender: Any?) { tileSide *= 1.25 }
     @objc func zoomOut(_ sender: Any?) { tileSide /= 1.25 }
 
     override func mouseMoved(with event: NSEvent) {
-        let index = collectionView.indexPathForItem(at: collectionView.convert(event.locationInWindow, from: nil))?.item
+        let index = collectionView.indexPathForItem(at: collectionView.convert(event.locationInWindow, from: nil)).flatMap(sections.index(for:))
         guard index != hoveredIndex else { return }
         hidePreview()
         hoveredIndex = index
@@ -130,14 +163,14 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
     override func mouseExited(with event: NSEvent) { hidePreview() }
 
     private func showPreview(_ index: Int) {
-        guard model.files.indices.contains(index),
-              let item = collectionView.item(at: IndexPath(item: index, section: 0)) as? ThumbnailItem else { return }
+        guard listed.indices.contains(index),
+              let item = collectionView.item(at: sections.indexPath(for: index)) as? ThumbnailItem else { return }
         let side = HoverPreview.side(tileSide: tileSide)
         let tile = view.convert(item.imageRect, from: item.view)
         let aspectSource = item.image.map { CGSize(width: $0.width, height: $0.height) } ?? CGSize(width: 1, height: 1)
         preview.show(item.image, frame: HoverPreview.frame(around: tile, imageSize: aspectSource, side: side, bounds: view.bounds.insetBy(dx: 8, dy: 8)))
         let pixels = Int((side * backingScale).rounded(.up))
-        previewRequest = thumbnails.request(model.files[index], pixelSize: pixels) { [weak self] result in
+        previewRequest = thumbnails.request(listed[index], pixelSize: pixels) { [weak self] result in
             guard let self, self.hoveredIndex == index, case .success(let image) = result else { return }
             self.preview.update(image)
         }

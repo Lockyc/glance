@@ -69,7 +69,21 @@ final class SubfolderBrowsingTests: XCTestCase {
     }
 
     func testRightArrowCrossesAMonthInTheGrid() throws {
-        throw XCTSkip("Task 7")
+        delegate.openURL(root.appendingPathComponent("2025/03/b.png"))
+        spin { self.names.count == 4 }
+        controller.showGrid()
+        let grid = try XCTUnwrap(controller.window?.firstResponder as? GridCollectionView)
+        XCTAssertEqual(grid.selectionIndexPaths, [IndexPath(item: 1, section: 0)])
+        grid.keyDown(with: right)
+        XCTAssertEqual(grid.selectionIndexPaths, [IndexPath(item: 0, section: 1)])
+    }
+
+    func testFlatGridHasNoHeaders() throws {
+        delegate.openURL(root.appendingPathComponent("timeline/t.png"))
+        controller.showGrid()
+        let grid = try XCTUnwrap(controller.window?.firstResponder as? GridCollectionView)
+        XCTAssertEqual(grid.numberOfSections, 1)
+        XCTAssertEqual((grid.collectionViewLayout as? NSCollectionViewFlowLayout)?.headerReferenceSize.height, 0)
     }
 
     func testOpeningTheRootLandsOnTheNewest() {
