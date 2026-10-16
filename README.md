@@ -21,7 +21,17 @@ glance is free and open source.
 
 ## Install
 
-Needs macOS 14+ and the Xcode command-line tools (Swift 6) plus [`just`](https://github.com/casey/just).
+Needs macOS 14+. Download the signed, notarized
+[`glance.zip`](https://github.com/lockyc/glance/releases/latest/download/glance.zip), unzip it
+and move `glance.app` to `/Applications`. To make it the default viewer for every image type
+except PDF:
+
+```bash
+/Applications/glance.app/Contents/MacOS/glance --make-default
+```
+
+Or build from source, with the Xcode command-line tools (Swift 6) and
+[`just`](https://github.com/casey/just):
 
 ```bash
 git clone https://github.com/lockyc/glance && cd glance
