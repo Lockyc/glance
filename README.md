@@ -31,7 +31,8 @@ just make-default   # makes glance the default viewer for every image type excep
 
 Opening a file shows it in its folder; opening a folder (or dropping one on the Dock icon)
 opens the grid. A file anywhere inside a folder with Include Subfolders on opens that whole
-tree, at that file. Subfolders can be left out from View → Subfolders or glance → Settings….
+tree, at that file. Individual subfolders can be excluded from the View → Subfolders submenu
+or glance → Settings….
 
 ## Keys
 
