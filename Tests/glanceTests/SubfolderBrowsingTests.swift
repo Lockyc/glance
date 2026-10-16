@@ -133,6 +133,24 @@ final class SubfolderBrowsingTests: XCTestCase {
         XCTAssertTrue(controller.isRoot)
     }
 
+    func testSubfoldersMenuListsTopLevelFoldersCheckedWhenIncluded() {
+        delegate.openURL(root.appendingPathComponent("d.png"))
+        spin { self.names.count == 4 }
+        let menu = NSMenu()
+        SubfoldersMenu.shared.populate(menu, for: controller)
+        XCTAssertEqual(menu.items.map(\.title), ["2025", "timeline"])
+        menu.items.forEach { _ = controller.validateMenuItem($0) }
+        XCTAssertEqual(menu.items.map(\.state), [.on, .off])
+    }
+
+    func testSubfoldersMenuExplainsItselfWhenOff() {
+        delegate.openURL(root.appendingPathComponent("timeline/t.png"))
+        let menu = NSMenu()
+        SubfoldersMenu.shared.populate(menu, for: controller)
+        XCTAssertEqual(menu.items.count, 1)
+        XCTAssertFalse(menu.items[0].isEnabled)
+    }
+
     func testExcludingASubfolderFromTheMenuRescans() {
         delegate.openURL(root.appendingPathComponent("d.png"))
         spin { self.names.count == 4 }

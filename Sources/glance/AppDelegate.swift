@@ -1,10 +1,12 @@
 import AppKit
 import GlanceCore
+import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var controllers: [BrowserWindowController] = []
     private let thumbnails = ThumbnailService()
     private let roots: SubfolderRoots
+    private var settingsWindow: NSWindow?
 
     init(roots: SubfolderRoots = .shared) {
         self.roots = roots
@@ -33,6 +35,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else if controllers.isEmpty {
             NSApp.terminate(nil)
         }
+    }
+
+    @objc func showSettings(_ sender: Any?) {
+        if settingsWindow == nil {
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(store: roots)))
+            window.title = "Settings"
+            window.isReleasedWhenClosed = false
+            window.center()
+            settingsWindow = window
+        }
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     @objc func makeDefaultViewer(_ sender: Any?) {

@@ -7,6 +7,8 @@ enum MainMenu {
         let app = submenu(in: main, title: "glance")
         app.addItem(withTitle: "About glance", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         app.addItem(.separator())
+        app.addItem(withTitle: "Settings…", action: #selector(AppDelegate.showSettings(_:)), keyEquivalent: ",")
+        app.addItem(.separator())
         app.addItem(withTitle: "Make Default Image Viewer", action: #selector(AppDelegate.makeDefaultViewer(_:)), keyEquivalent: "")
         app.addItem(.separator())
         app.addItem(withTitle: "Hide glance", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
@@ -18,6 +20,12 @@ enum MainMenu {
 
         let view = submenu(in: main, title: "View")
         view.addItem(withTitle: "Toggle Grid", action: #selector(BrowserWindowController.toggleGrid(_:)), keyEquivalent: "g")
+        view.addItem(.separator())
+        view.addItem(withTitle: "Include Subfolders", action: #selector(BrowserWindowController.toggleSubfolders(_:)), keyEquivalent: "")
+        let subfolders = view.addItem(withTitle: "Subfolders", action: nil, keyEquivalent: "")
+        let subfoldersMenu = NSMenu(title: "Subfolders")
+        subfoldersMenu.delegate = SubfoldersMenu.shared
+        subfolders.submenu = subfoldersMenu
         view.addItem(.separator())
         view.addItem(withTitle: "Zoom In", action: #selector(ZoomActions.zoomIn(_:)), keyEquivalent: "+")
         view.addItem(withTitle: "Zoom Out", action: #selector(ZoomActions.zoomOut(_:)), keyEquivalent: "-")
