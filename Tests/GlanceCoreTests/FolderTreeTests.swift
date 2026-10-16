@@ -69,6 +69,83 @@ final class FolderTreeTests: XCTestCase {
         XCTAssertEqual(listing.dates, [])
     }
 
+    private func relist(_ root: URL, _ listing: FolderModel.Listing, _ dirs: [String]) -> FolderModel.Listing {
+        let base = root.resolvingSymlinksInPath()
+        let changed = Set(dirs.map { $0.isEmpty ? base : base.appendingPathComponent($0, isDirectory: true) })
+        return FolderModel.relist(listing, root: base, excluded: ["timeline"], changed: changed)
+    }
+
+    func testRelistMatchesAFullScanAfterAdditionsAndRemovals() throws {
+        let root = Fixtures.tempDir()
+        Fixtures.file("2025/03/a.png", in: root, created: Fixtures.day(0))
+        Fixtures.file("2025/03/b.png", in: root, created: Fixtures.day(1))
+        Fixtures.file("loose.png", in: root, created: Fixtures.day(5))
+        let before = try FolderModel.scanTree(root, excluded: ["timeline"])
+        Fixtures.file("2025/03/c.png", in: root, created: Fixtures.day(2))
+        try FileManager.default.removeItem(at: root.appendingPathComponent("2025/03/a.png"))
+        let after = relist(root, before, ["2025/03"])
+        XCTAssertEqual(after, try FolderModel.scanTree(root, excluded: ["timeline"]))
+    }
+
+    func testRelistWalksANewSubfolderReportedOnlyOnItsParent() throws {
+        let root = Fixtures.tempDir()
+        Fixtures.file("a.png", in: root, created: Fixtures.day(0))
+        let before = try FolderModel.scanTree(root, excluded: ["timeline"])
+        Fixtures.file("2026/10/new.png", in: root, created: Fixtures.day(9))
+        Fixtures.file("2026/10/deeper/x.png", in: root, created: Fixtures.day(10))
+        XCTAssertEqual(relist(root, before, [""]).files.map(\.lastPathComponent), ["a.png", "new.png", "x.png"])
+    }
+
+    func testRelistOfParentAndNewChildTogetherHasNoDuplicates() throws {
+        let root = Fixtures.tempDir()
+        let before = try FolderModel.scanTree(root, excluded: ["timeline"])
+        Fixtures.file("2026/n.png", in: root, created: Fixtures.day(0))
+        XCTAssertEqual(relist(root, before, ["", "2026"]).files.map(\.lastPathComponent), ["n.png"])
+    }
+
+    func testRenamedSubfolderReplacesItsEntries() throws {
+        let root = Fixtures.tempDir()
+        Fixtures.file("old/a.png", in: root, created: Fixtures.day(0))
+        Fixtures.file("old/inner/b.png", in: root, created: Fixtures.day(1))
+        let before = try FolderModel.scanTree(root, excluded: ["timeline"])
+        try FileManager.default.moveItem(at: root.appendingPathComponent("old"), to: root.appendingPathComponent("new"))
+        let after = relist(root, before, [""])
+        XCTAssertEqual(after, try FolderModel.scanTree(root, excluded: ["timeline"]))
+        XCTAssertTrue(after.files.allSatisfy { $0.path.contains("/new/") })
+    }
+
+    func testDeletedFolderDropsEverythingUnderIt() throws {
+        let root = Fixtures.tempDir()
+        Fixtures.file("gone/a.png", in: root, created: Fixtures.day(0))
+        Fixtures.file("gone/x/b.png", in: root, created: Fixtures.day(1))
+        Fixtures.file("keep.png", in: root, created: Fixtures.day(2))
+        let before = try FolderModel.scanTree(root, excluded: ["timeline"])
+        try FileManager.default.removeItem(at: root.appendingPathComponent("gone"))
+        XCTAssertEqual(relist(root, before, ["gone"]).files.map(\.lastPathComponent), ["keep.png"])
+    }
+
+    func testChangesInsideExcludedFoldersAreIgnored() throws {
+        let root = Fixtures.tempDir()
+        Fixtures.file("a.png", in: root, created: Fixtures.day(0))
+        let before = try FolderModel.scanTree(root, excluded: ["timeline"])
+        Fixtures.file("timeline/d/t.png", in: root, created: Fixtures.day(1))
+        XCTAssertEqual(relist(root, before, ["timeline/d", ""]), before)
+    }
+
+    /// CleanShot files a loose screenshot into its month folder: same file, new path, same date.
+    func testFileMovedIntoASubfolderStaysCurrent() throws {
+        let root = Fixtures.tempDir()
+        Fixtures.file("2026/10/a.png", in: root, created: Fixtures.day(0))
+        Fixtures.file("shot.png", in: root, created: Fixtures.day(1))
+        Fixtures.file("z.png", in: root, created: Fixtures.day(2))
+        let model = try FolderModel.load(folder: root, current: root.appendingPathComponent("shot.png"), scope: .tree(excluded: []))
+        try FileManager.default.moveItem(at: root.appendingPathComponent("shot.png"), to: root.appendingPathComponent("2026/10/shot.png"))
+        let after = relist(root, model.listing, ["", "2026/10"])
+        model.replaceFiles(after.files, dates: after.dates)
+        XCTAssertEqual(model.files.map(\.lastPathComponent), ["a.png", "shot.png", "z.png"])
+        XCTAssertEqual(model.current?.path, FolderModel.canonical(root.appendingPathComponent("2026/10/shot.png")).path)
+    }
+
     func testSelectingAnUnlistedFileInATreeInsertsItByDate() throws {
         let root = Fixtures.tempDir()
         Fixtures.file("a.png", in: root, created: Fixtures.day(0))

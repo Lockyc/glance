@@ -25,6 +25,14 @@ public final class FolderModel {
     struct Entry: Equatable {
         let url: URL
         let date: Date
+        /// `url.path`, computed once: `relist` tests every entry's path against each changed folder.
+        let path: String
+
+        init(url: URL, date: Date) {
+            self.url = url
+            self.date = date
+            path = url.path
+        }
     }
 
     public let folder: URL
@@ -79,6 +87,45 @@ public final class FolderModel {
         return sorted(entries)
     }
 
+    /// `listing` with the folders in `changed` re-read: each one's own images replaced, a subfolder
+    /// that appeared walked whole, one that vanished dropped with everything under it. Folders
+    /// outside `root` or inside an excluded folder are ignored. Parents are handled before their
+    /// children, so a new folder reported on both levels is not listed twice.
+    public static func relist(_ listing: Listing, root: URL, excluded: Set<String>, changed: Set<URL>) -> Listing {
+        var entries = zip(listing.files, listing.dates).map(Entry.init)
+        for dir in changed.map({ URL(fileURLWithPath: $0.path, isDirectory: true) }).sorted(by: { $0.path.count < $1.path.count }) {
+            guard let relative = SubfolderRoots.relativePath(of: dir, in: root),
+                  !excluded.contains(where: { relative == $0 || relative.hasPrefix($0 + "/") }) else { continue }
+            let prefix = dir.path + "/"
+            let isUnder = { (entry: Entry) in entry.path.hasPrefix(prefix) }
+            guard let (images, folders) = try? read(dir) else {
+                entries.removeAll(where: isUnder)
+                continue
+            }
+            let join = { (name: String) in relative.isEmpty ? name : relative + "/" + name }
+            let present = Set(folders.filter { !excluded.contains(join($0)) })
+            var held = Set<String>()
+            // Own images go (re-added below); images in folders that vanished go; the rest stay.
+            entries.removeAll { entry in
+                guard isUnder(entry) else { return false }
+                guard let top = topFolder(of: entry.path, under: prefix) else { return true }
+                held.insert(top)
+                return !present.contains(top)
+            }
+            entries += images
+            for name in present.subtracting(held) {
+                try? walk(dir.appendingPathComponent(name), relative: join(name), excluded: excluded, into: &entries)
+            }
+        }
+        return sorted(entries)
+    }
+
+    /// The first folder name below `prefix` in `url`'s path; nil for a file directly in it.
+    private static func topFolder(of path: String, under prefix: String) -> String? {
+        let rest = path.dropFirst(prefix.count)
+        return rest.firstIndex(of: "/").map { String(rest[..<$0]) }
+    }
+
     static func walk(_ dir: URL, relative: String, excluded: Set<String>, into entries: inout [Entry]) throws {
         let (images, folders) = try read(dir)
         entries += images
@@ -123,7 +170,7 @@ public final class FolderModel {
     static func chronological(_ a: Entry, _ b: Entry) -> Bool {
         if a.date != b.date { return a.date < b.date }
         let byName = a.url.lastPathComponent.localizedStandardCompare(b.url.lastPathComponent)
-        return byName != .orderedSame ? byName == .orderedAscending : a.url.path < b.url.path
+        return byName != .orderedSame ? byName == .orderedAscending : a.path < b.path
     }
 
     /// An explicitly opened file is always included, even if a scan would filter it out —

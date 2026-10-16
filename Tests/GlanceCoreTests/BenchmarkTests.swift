@@ -49,4 +49,18 @@ final class BenchmarkTests: XCTestCase {
         let t = median(3) { _ = try? FolderModel.scanTree(root, excluded: []) }
         XCTAssertLessThan(t, 1.5, "median \(Int(t * 1000)) ms")
     }
+
+    func testRelistOfOne1500FileFolderIn25000Under100ms() throws {
+        let root = Fixtures.tempDir()
+        for month in 0..<35 {
+            let dir = root.appendingPathComponent("m\(month)", isDirectory: true)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            Fixtures.touch((0..<672).map { "s\(month)-\($0).png" }, in: dir)
+        }
+        Fixtures.touch((0..<1500).map { "loose-\($0).png" }, in: root)
+        let base = root.resolvingSymlinksInPath()
+        let listing = try FolderModel.scanTree(base, excluded: [])
+        let t = median { _ = FolderModel.relist(listing, root: base, excluded: [], changed: [base]) }
+        XCTAssertLessThan(t, 0.100, "median \(Int(t * 1000)) ms")
+    }
 }
