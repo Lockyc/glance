@@ -27,7 +27,7 @@ bench:
 build:
     swift build -c release
 
-# Assemble .build/glance.app (version from VERSION, document types from --list-types)
+# Assemble .build/glance.app (version from VERSION, document types from --list-types; signed with APPLE_SIGNING_IDENTITY, else ad-hoc)
 [group("build")]
 bundle: build
     #!/usr/bin/env bash
@@ -42,7 +42,11 @@ bundle: build
     for t in $(.build/release/glance --list-types); do
         plutil -insert CFBundleDocumentTypes.0.LSItemContentTypes -string "$t" -append "$plist"
     done
-    codesign --force --sign - "{{app}}"
+    if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
+        codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "{{app}}"
+    else
+        codesign --force --sign - "{{app}}"
+    fi
 
 # Build and open glance on the given files/folders
 [group("app")]

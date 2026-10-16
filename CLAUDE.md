@@ -47,9 +47,11 @@ thin. Anything testable without a window belongs in `GlanceCore`.
 fast-forward to `dev` at release. `VERSION` is the single version source; tags are
 `v<VERSION>`, each with a GitHub release carrying notes.
 
-Cutting a release: bump `VERSION` on `dev`, curate `README.md`, `just gate`, fast-forward `main`
-to `dev` and push, tag `v<VERSION>` and push the tag, then `just bundle`, zip `.build/glance.app`
-with `ditto -c -k --keepParent`, and `gh release create` with the zip and notes.
+Cutting a release: bump `VERSION` on `dev`, curate `README.md`, commit and push `dev`. The
+release itself (notarize, tag, fast-forward `main`, publish `glance.zip`) is run by the
+maintainer's release tooling, outside this repo. The interface it relies on: `just gate`, and
+`just bundle` signing the justfile's `app` (`.build/glance.app`) with the Developer ID named by `APPLE_SIGNING_IDENTITY` and the
+hardened runtime. Without that variable the bundle is ad-hoc signed, which runs locally.
 
 ## Build & test
 
