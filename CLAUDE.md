@@ -42,6 +42,8 @@ thin. Anything testable without a window belongs in `GlanceCore`.
 - A set or comparison window (`Scope.fixed`) is never scanned, watched, or reused by an ordinary open.
 - A tree's `FolderModel.files` and `dates` stay parallel (the grid's month sections index
   both): pass a tree's dates to every `replaceFiles(_:dates:)`; a flat folder has none.
+- A comparison window's `FolderModel.files` is `Comparison.files`, so index i ↔ `Comparison.cells[i]`:
+  navigate by index, never by `firstIndex(of:)` on a URL (a file may sit in several cells).
 
 ## Branches and releases
 
