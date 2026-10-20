@@ -79,13 +79,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         watch()
         NotificationCenter.default.addObserver(self, selector: #selector(rootsChanged), name: SubfolderRoots.didChange, object: roots)
 
+        // A fixed list is complete from the start, so an empty one reads as empty, not loading.
+        if model.scope == .fixed { scanned = true }
         modelChanged(.files)
         startInGrid ? showGrid() : showViewer()
-        if model.scope == .fixed {
-            scanned = true
-        } else {
-            request(.everything)
-        }
+        if model.scope != .fixed { request(.everything) }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }

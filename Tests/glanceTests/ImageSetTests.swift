@@ -49,6 +49,18 @@ final class ImageSetTests: XCTestCase {
         XCTAssertFalse(controller.validateMenuItem(item))
     }
 
+    func testAnEmptySetReadsAsEmptyNotLoading() {
+        let model = FolderModel(folder: dir, files: [], current: nil, scope: .fixed)
+        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
+        let controller = BrowserWindowController(model: model, thumbnails: ThumbnailService(cacheDirectory: cache), startInGrid: false)
+        defer { controller.close() }
+
+        func labels(in view: NSView) -> [String] {
+            view.subviews.flatMap { sub in (sub as? NSTextField).map { [$0.stringValue] } ?? labels(in: sub) }
+        }
+        XCTAssertTrue(labels(in: controller.window!.contentView!).contains { $0.hasPrefix("No images") })
+    }
+
     func testOpenSetAlwaysMakesANewWindowAndFolderOpensSkipIt() {
         delegate.openSet([url("a.png")])
         delegate.openSet([url("a.png")])
