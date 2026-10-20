@@ -12,7 +12,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let grid: any BrowserGrid
     /// Set for a comparison window: the grid is the variant × shot grid and the viewer steps in 2D.
     private let comparison: Comparison?
-    private var showingGrid = false
+    private(set) var showingGrid = false
     /// Full-detail re-decodes for zoom run one at a time; a newer request or a change of file cancels the last.
     private let upgrades: OperationQueue = {
         let queue = OperationQueue()

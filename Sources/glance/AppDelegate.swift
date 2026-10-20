@@ -7,6 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let thumbnails = ThumbnailService()
     private let roots: SubfolderRoots
     private var settingsWindow: NSWindow?
+    /// Tests clear this so opening a window never orders it onto the screen or takes focus.
+    var ordersWindowsFront = true
 
     init(roots: SubfolderRoots = .shared) {
         self.roots = roots
@@ -16,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.make()
         NSApp.activate()
+        // Only a plain launch asks for a file; a launch to open a URL or file brings its own.
+        let isDefaultLaunch = (notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey] as? Bool) ?? true
+        guard isDefaultLaunch else { return }
         // Files passed at launch arrive via application(_:open:) before this async block runs.
         DispatchQueue.main.async { if self.controllers.isEmpty { self.openDocument(nil) } }
     }
@@ -82,7 +87,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func present(_ controller: BrowserWindowController) {
         controller.onClose = { [weak self, weak controller] in self?.controllers.removeAll { $0 === controller } }
         controllers.append(controller)
-        controller.showWindow(nil)
+        show(controller)
+    }
+
+    private func show(_ controller: BrowserWindowController) {
+        if ordersWindowsFront { controller.showWindow(nil) }
     }
 
     /// A file opens its folder at that file; a folder opens in the grid. Anything inside a root
@@ -100,7 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let file { existing.model.select(file) }
             if let landing { existing.land(at: landing) }
             isFolder ? existing.showGrid() : existing.showViewer()
-            existing.showWindow(nil)
+            show(existing)
             return
         }
 

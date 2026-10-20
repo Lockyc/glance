@@ -14,6 +14,7 @@ final class ImageSetTests: XCTestCase {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         for name in ["a.png", "b.png", "c.png"] { writeTestPNG(to: dir.appendingPathComponent(name)) }
         delegate = AppDelegate(roots: SubfolderRoots(defaults: UserDefaults(suiteName: "glance-tests-\(UUID().uuidString)")!))
+        delegate.ordersWindowsFront = false
     }
 
     override func tearDown() { delegate.controllers.forEach { $0.close() } }
@@ -54,5 +55,40 @@ final class ImageSetTests: XCTestCase {
         XCTAssertEqual(delegate.controllers.count, 2)
         delegate.openURL(dir)
         XCTAssertEqual(delegate.controllers.count, 3)
+    }
+
+    private func open(_ request: LaunchRequest) { delegate.application(NSApplication.shared, open: [request.url]) }
+
+    func testSetURLOpensANewFixedWindowOnExactlyThoseFiles() {
+        let files = [url("c.png"), url("a.png")]
+        open(.set(files))
+        XCTAssertEqual(delegate.controllers.count, 1)
+        XCTAssertEqual(delegate.controllers[0].model.scope, .fixed)
+        XCTAssertEqual(delegate.controllers[0].model.files, files)
+        open(.set(files))
+        XCTAssertEqual(delegate.controllers.count, 2)
+    }
+
+    func testComparisonURLOpensANewWindowInTheComparisonGrid() {
+        let request = LaunchRequest.comparison([Variant(label: "a", files: [url("a.png")]),
+                                                Variant(label: "b", files: [url("b.png")])])
+        open(request)
+        open(request)
+        XCTAssertEqual(delegate.controllers.count, 2)
+        XCTAssertTrue(delegate.controllers.allSatisfy { $0.showingGrid && $0.model.scope == .fixed })
+        XCTAssertEqual(delegate.controllers[0].model.files, [url("a.png"), url("b.png")])
+    }
+
+    func testFolderURLOpensAFolderWindowAndASecondOpenReusesIt() {
+        open(.folder(dir))
+        XCTAssertEqual(delegate.controllers.count, 1)
+        XCTAssertNotEqual(delegate.controllers[0].model.scope, .fixed)
+        open(.folder(dir))
+        XCTAssertEqual(delegate.controllers.count, 1)
+    }
+
+    func testMalformedURLOpensNothing() {
+        delegate.application(NSApplication.shared, open: [URL(string: "glance://open?r=garbage")!])
+        XCTAssertTrue(delegate.controllers.isEmpty)
     }
 }

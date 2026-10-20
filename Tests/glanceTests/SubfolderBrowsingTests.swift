@@ -22,6 +22,7 @@ final class SubfolderBrowsingTests: XCTestCase {
         roots.enable(root)
         roots.setExcluded("timeline", true, in: root)
         delegate = AppDelegate(roots: roots)
+        delegate.ordersWindowsFront = false
     }
 
     override func tearDown() { delegate.controllers.forEach { $0.close() } }
