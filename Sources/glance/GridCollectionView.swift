@@ -8,24 +8,13 @@ final class GridCollectionView: NSCollectionView {
     var onExit: (() -> Void)?
 
     override func keyDown(with event: NSEvent) {
-        let bare = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.numericPad, .function]).isEmpty
-        switch event.keyCode {
-        case 36, 76: // Return, keypad Enter
-            if let path = selectionIndexPaths.first { onActivate?(path) }
-        case 53: // Esc
-            onExit?()
-        case 123 where bare: // ←
-            onStep?(-1)
-        case 124 where bare: // →
-            onStep?(1)
-        default:
-            if bare, event.charactersIgnoringModifiers == "g" || event.charactersIgnoringModifiers == " " {
-                onExit?()
-            } else if bare, event.charactersIgnoringModifiers == "f" {
-                window?.toggleFullScreen(nil)
-            } else {
-                super.keyDown(with: event)
-            }
+        switch GridKey.from(event) {
+        case .activate: if let path = selectionIndexPaths.first { onActivate?(path) }
+        case .exit: onExit?()
+        case .toggleFullScreen: window?.toggleFullScreen(nil)
+        case .arrow(.left): onStep?(-1)
+        case .arrow(.right): onStep?(1)
+        case .arrow(.up), .arrow(.down), nil: super.keyDown(with: event)
         }
     }
 

@@ -270,22 +270,12 @@ final class ComparisonGridView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        let bare = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.numericPad, .function]).isEmpty
-        switch event.keyCode {
-        case 36, 76: activate(selection) // Return, keypad Enter
-        case 53: onExit?() // Esc
-        case 123 where bare: move(.left)
-        case 124 where bare: move(.right)
-        case 125 where bare: move(.down)
-        case 126 where bare: move(.up)
-        default:
-            if bare, event.charactersIgnoringModifiers == "g" || event.charactersIgnoringModifiers == " " {
-                onExit?()
-            } else if bare, event.charactersIgnoringModifiers == "f" {
-                window?.toggleFullScreen(nil)
-            } else {
-                super.keyDown(with: event)
-            }
+        switch GridKey.from(event) {
+        case .activate: activate(selection)
+        case .exit: onExit?()
+        case .toggleFullScreen: window?.toggleFullScreen(nil)
+        case .arrow(let direction): move(direction)
+        case nil: super.keyDown(with: event)
         }
     }
 
