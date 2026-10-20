@@ -53,12 +53,13 @@ bundle: build
 run *paths: bundle
     open -a "$PWD/{{app}}" {{paths}}
 
-# Quit any running glance, then install to /Applications and register with Launch Services
+# Quit any running glance, install to /Applications, register with Launch Services, and link `glance` onto the PATH
 [group("app")]
 install: bundle quit
     rm -rf /Applications/glance.app
     cp -R "{{app}}" /Applications/glance.app
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/glance.app
+    mkdir -p ~/.local/bin && ln -sf /Applications/glance.app/Contents/MacOS/glance ~/.local/bin/glance
 
 # Quits any running glance, force-killing one still alive after 3s.
 [private]

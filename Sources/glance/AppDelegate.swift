@@ -21,7 +21,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ sender: NSApplication, open urls: [URL]) {
-        urls.forEach(openURL)
+        for url in urls {
+            guard url.scheme == "glance" else { openURL(url); continue }
+            switch LaunchRequest(url: url) {
+            case .set(let files): openSet(files)
+            case .comparison(let variants): openComparison(Comparison(variants: variants))
+            case .folder(let folder): openURL(folder)
+            case nil: break
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
