@@ -13,9 +13,7 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
     private let collectionView = GridCollectionView()
     private let layout = NSCollectionViewFlowLayout()
     private let preview = HoverPreviewView()
-    private var hoverTimer: Timer?
-    private var hoveredIndex: Int?
-    private var previewRequest: Operation?
+    private lazy var previewer = HoverPreviewer(preview: preview, thumbnails: thumbnails)
     /// The file list and its month sections as last loaded into the collection view; items and
     /// old selections resolve against these, never against a model that may have moved on.
     private var listed: [URL] = []
@@ -151,38 +149,18 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, Zo
 
     override func mouseMoved(with event: NSEvent) {
         let index = collectionView.indexPathForItem(at: collectionView.convert(event.locationInWindow, from: nil)).flatMap(sections.index(for:))
-        guard index != hoveredIndex else { return }
-        hidePreview()
-        hoveredIndex = index
-        guard let index else { return }
-        hoverTimer = Timer.scheduledTimer(withTimeInterval: HoverPreview.delay, repeats: false) { [weak self] _ in
-            self?.showPreview(index)
-        }
+        previewer.hover(over: index) { [weak self] in self?.hoverTarget(at: index) }
     }
 
     override func mouseExited(with event: NSEvent) { hidePreview() }
 
-    private func showPreview(_ index: Int) {
-        guard listed.indices.contains(index),
-              let item = collectionView.item(at: sections.indexPath(for: index)) as? ThumbnailItem else { return }
+    private func hoverTarget(at index: Int?) -> HoverTarget? {
+        guard let index, listed.indices.contains(index),
+              let item = collectionView.item(at: sections.indexPath(for: index)) as? ThumbnailItem else { return nil }
         let side = HoverPreview.side(tileSide: tileSide)
-        let tile = view.convert(item.imageRect, from: item.view)
-        let aspectSource = item.image.map { CGSize(width: $0.width, height: $0.height) } ?? CGSize(width: 1, height: 1)
-        preview.show(item.image, frame: HoverPreview.frame(around: tile, imageSize: aspectSource, side: side, bounds: view.bounds.insetBy(dx: 8, dy: 8)))
-        let pixels = Int((side * backingScale).rounded(.up))
-        previewRequest = thumbnails.request(listed[index], pixelSize: pixels) { [weak self] result in
-            guard let self, self.hoveredIndex == index, case .success(let image) = result else { return }
-            self.preview.update(image)
-        }
+        return HoverTarget(url: listed[index], tile: view.convert(item.imageRect, from: item.view), image: item.image, side: side,
+                           bounds: view.bounds.insetBy(dx: 8, dy: 8), pixels: Int((side * backingScale).rounded(.up)))
     }
 
-    /// Also clears `hoveredIndex`, so after a scroll the next mouse move re-arms the preview.
-    @objc private func hidePreview() {
-        hoverTimer?.invalidate()
-        hoverTimer = nil
-        previewRequest?.cancel()
-        previewRequest = nil
-        hoveredIndex = nil
-        preview.hide()
-    }
+    @objc private func hidePreview() { previewer.hide() }
 }
