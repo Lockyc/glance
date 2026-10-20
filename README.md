@@ -103,7 +103,9 @@ reuses its existing window.
 | ← / → (viewer) | Same shot in the previous / next variant (wraps) |
 | ↑ / ↓ (viewer) | Previous / next shot in the same variant |
 | Return or click | Open the cell in the viewer |
-| G, Space or Esc | Viewer back to the grid; in the grid, close it to the viewer |
+| G / Space / Esc (grid) | Open the viewer on the current cell |
+| G / Space (viewer) | Back to the grid |
+| Esc (viewer) | Leave full screen, otherwise back to the grid |
 | ⌘+ / ⌘− | Larger / smaller cells (remembered) |
 
 ## Formats
