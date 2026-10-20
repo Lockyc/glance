@@ -22,6 +22,11 @@ test:
 bench:
     GLANCE_BENCH=1 swift test --filter BenchmarkTests
 
+# Render the comparison grid, viewer and hover previews off screen to PNGs in DIR
+[group("check")]
+snapshot dir:
+    GLANCE_SNAPSHOT_DIR={{dir}} swift test --filter SnapshotTests
+
 # Build the release binary
 [group("build")]
 build:
