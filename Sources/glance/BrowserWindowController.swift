@@ -76,7 +76,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
         modelChanged(.files)
         startInGrid ? showGrid() : showViewer()
-        request(.everything)
+        if model.scope == .fixed {
+            scanned = true
+        } else {
+            request(.everything)
+        }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
@@ -113,9 +117,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: Model
 
-    var isRoot: Bool { model.scope != .flat }
+    var isRoot: Bool {
+        if case .tree = model.scope { return true }
+        return false
+    }
 
     private func watch() {
+        guard model.scope != .fixed else { return }
         watcher = TreeWatcher(folder: model.folder, recursive: isRoot) { [weak self] in self?.request($0) }
     }
 
@@ -187,6 +195,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     func subfolders() -> [String] { rootFolders }
 
     @objc private func rootsChanged() {
+        guard model.scope != .fixed else { return }
         let scope: FolderModel.Scope = roots.root(at: model.folder).map { .tree(excluded: Set($0.excluded)) } ?? .flat
         guard scope != model.scope else { return }
         let wasRoot = isRoot
@@ -258,6 +267,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
 extension BrowserWindowController: NSMenuItemValidation {
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if model.scope == .fixed, item.action == #selector(toggleSubfolders(_:)) || item.action == #selector(toggleExcludedSubfolder(_:)) {
+            return false
+        }
         switch item.action {
         case #selector(toggleSubfolders(_:)):
             item.state = isRoot ? .on : .off

@@ -10,6 +10,8 @@ public final class FolderModel {
         case flat
         /// Every image under the folder, oldest first; `excluded` are folder paths relative to it.
         case tree(excluded: Set<String>)
+        /// Exactly the listed files, duplicates included, never scanned or watched.
+        case fixed
     }
 
     public struct Listing: Equatable {
@@ -202,6 +204,7 @@ public final class FolderModel {
         switch scope {
         case .flat: return inserting(current.map(canonical), into: Listing(files: try scan(folder)), tree: false)
         case .tree(let excluded): return inserting(current.map(canonical), into: try scanTree(folder, excluded: excluded), tree: true)
+        case .fixed: throw CocoaError(.fileReadUnknown)
         }
     }
 
@@ -236,7 +239,7 @@ public final class FolderModel {
     /// inserted rather than ignored; the next scan reconciles the list.
     public func select(_ url: URL) {
         let url = Self.canonical(url)
-        if !files.contains(url) {
+        if !files.contains(url), scope != .fixed {
             let updated = Self.inserting(url, into: listing, tree: scope != .flat)
             replaceFiles(updated.files, dates: updated.dates)
         }

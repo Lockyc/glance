@@ -39,6 +39,15 @@ final class FolderModelTests: XCTestCase {
         XCTAssertEqual(m.current?.lastPathComponent, "notes.txt")
     }
 
+    func testFixedScopeKeepsDuplicatesAndSelectsByIndex() {
+        let dir = Fixtures.tempDir()
+        let a = dir.appendingPathComponent("a.jpg"), b = dir.appendingPathComponent("b.jpg")
+        let m = FolderModel(folder: dir, files: [a, b, a], current: nil, scope: .fixed)
+        XCTAssertEqual(m.currentIndex, 0)
+        m.move(by: 2); XCTAssertEqual(m.currentIndex, 2)
+        m.move(by: 1); XCTAssertEqual(m.currentIndex, 0)
+    }
+
     func testMoveWrapsBothWays() throws {
         let m = try model(["a.jpg", "b.jpg", "c.jpg"], current: "c.jpg")
         m.move(by: 1); XCTAssertEqual(m.currentIndex, 0)

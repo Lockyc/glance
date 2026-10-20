@@ -29,11 +29,7 @@ final class SubfolderBrowsingTests: XCTestCase {
     private func write(_ path: String, day: Int) {
         let url = root.appendingPathComponent(path)
         try! FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let ctx = CGContext(data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 0,
-                            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-        let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
-        CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
-        CGImageDestinationFinalize(dest)
+        writeTestPNG(to: url)
         try! FileManager.default.setAttributes([.creationDate: Date(timeIntervalSince1970: 1_741_564_800 + Double(day) * 86_400)], ofItemAtPath: url.path)
     }
 

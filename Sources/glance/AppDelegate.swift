@@ -57,6 +57,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Always a new window on exactly `files`, in order; never reused by a later open.
+    func openSet(_ files: [URL]) {
+        guard let first = files.first else { return }
+        let model = FolderModel(folder: first.deletingLastPathComponent(), files: files.map(FolderModel.canonical),
+                                current: nil, scope: .fixed)
+        let controller = BrowserWindowController(model: model, thumbnails: thumbnails, startInGrid: false, roots: roots)
+        controller.onClose = { [weak self, weak controller] in self?.controllers.removeAll { $0 === controller } }
+        controllers.append(controller)
+        controller.showWindow(nil)
+    }
+
     /// A file opens its folder at that file; a folder opens in the grid. Anything inside a root
     /// opens the root's window — a folder there lands on its newest image. A folder that already
     /// has a window reuses it.
@@ -68,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let file = isFolder ? nil : url
         let landing = isFolder && root != nil ? opened : nil
 
-        if let existing = controllers.first(where: { $0.model.folder.path == folder.path }) {
+        if let existing = controllers.first(where: { $0.model.scope != .fixed && $0.model.folder.path == folder.path }) {
             if let file { existing.model.select(file) }
             if let landing { existing.land(at: landing) }
             isFolder ? existing.showGrid() : existing.showViewer()

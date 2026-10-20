@@ -32,11 +32,7 @@ final class KeyHandlingTests: XCTestCase {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("glance-shell-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         for name in ["a.png", "b.png", "c.png"] {
-            let ctx = CGContext(data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 0,
-                                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-            let dest = CGImageDestinationCreateWithURL(dir.appendingPathComponent(name) as CFURL, UTType.png.identifier as CFString, 1, nil)!
-            CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
-            CGImageDestinationFinalize(dest)
+            writeTestPNG(to: dir.appendingPathComponent(name))
         }
         let model = try FolderModel.load(folder: dir, current: dir.appendingPathComponent("a.png"))
         let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
