@@ -22,18 +22,28 @@ func fail(_ message: String, status: Int32) -> Never {
     exit(status)
 }
 
+/// The CLI hands every request to the app (launching it if needed) rather than opening windows itself.
+func appBundle() -> URL {
+    guard let bundle = LaunchRequest.appBundle(containing: Bundle.main.executableURL!.resolvingSymlinksInPath()) else {
+        fail("run from glance.app", status: 1)
+    }
+    return bundle
+}
+
 do {
     let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
-    switch try LaunchRequest.parse(Array(arguments), workingDirectory: cwd) {
+    switch try LaunchRequest.parse(Array(arguments), workingDirectory: cwd, launchedByLaunchServices: getppid() == 1) {
     case .help:
         print(LaunchRequest.usage)
         exit(0)
-    case .open(let request):
-        // The CLI forwards to the app (launching it if needed) rather than opening windows itself.
-        guard let bundle = LaunchRequest.appBundle(containing: Bundle.main.executableURL!.resolvingSymlinksInPath()) else {
-            fail("run from glance.app", status: 1)
+    case .activateApp:
+        NSWorkspace.shared.openApplication(at: appBundle(), configuration: NSWorkspace.OpenConfiguration()) { _, error in
+            if let error { fail(error.localizedDescription, status: 1) }
+            exit(0)
         }
-        NSWorkspace.shared.open([request.url], withApplicationAt: bundle,
+        dispatchMain()
+    case .open(let request):
+        NSWorkspace.shared.open([request.url], withApplicationAt: appBundle(),
                                 configuration: NSWorkspace.OpenConfiguration()) { _, error in
             if let error { fail(error.localizedDescription, status: 1) }
             exit(0)

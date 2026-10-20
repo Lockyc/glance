@@ -19,7 +19,10 @@ public enum LaunchRequest: Equatable, Codable {
     case comparison([Variant])
 
     public enum Parsed: Equatable {
+        /// This process is the app: run it.
         case launchApp
+        /// A bare `glance` in a terminal: open or activate the app, never become a second instance.
+        case activateApp
         case help
         case open(LaunchRequest)
     }
@@ -29,7 +32,8 @@ public enum LaunchRequest: Equatable, Codable {
     }
 
     public static let usage = """
-        usage: glance                                     launch the app
+        usage: glance                                     open the app, or bring it forward
+               glance -h | --help                         show this help
                glance <folder>                            open a folder
                glance <file>...                           open files as a set
                glance --variant <label> <file>... [--variant <label> <file>...]...
@@ -37,10 +41,17 @@ public enum LaunchRequest: Equatable, Codable {
         --variant starts a labelled group of files; two or more groups make a comparison.
         """
 
-    /// No arguments, or a leading `-flag`, is Launch Services or Cocoa starting the app, not a CLI request.
-    public static func parse(_ arguments: [String], workingDirectory: URL) throws -> Parsed {
-        guard let first = arguments.first, !(first.hasPrefix("-") && !first.hasPrefix("--")) else { return .launchApp }
-        if arguments == ["--help"] { return .help }
+    /// Under Launch Services, no arguments or a leading Cocoa `-flag` means run the app. From a
+    /// terminal the process must never become a second app instance, so a single-dash flag is
+    /// only ever `-h` or an error.
+    public static func parse(_ arguments: [String], workingDirectory: URL,
+                             launchedByLaunchServices: Bool) throws -> Parsed {
+        if launchedByLaunchServices {
+            guard let first = arguments.first, !isSingleDash(first) else { return .launchApp }
+        } else if arguments.isEmpty {
+            return .activateApp
+        }
+        if arguments == ["--help"] || arguments == ["-h"] { return .help }
 
         func resolve(_ path: String) -> URL {
             URL(fileURLWithPath: path, relativeTo: workingDirectory).standardizedFileURL.absoluteURL
@@ -72,7 +83,7 @@ public enum LaunchRequest: Equatable, Codable {
                 guard index < arguments.count else { throw ParseError(message: "--variant needs a label") }
                 currentLabel = arguments[index]
                 index += 1
-            } else if argument.hasPrefix("--") {
+            } else if argument.hasPrefix("--") || isSingleDash(argument) {
                 throw ParseError(message: "unknown option \(argument)")
             } else {
                 let url = resolve(argument)
@@ -96,6 +107,10 @@ public enum LaunchRequest: Equatable, Codable {
         if folders.isEmpty { return .open(.set(plain)) }
         guard plain.count == 1 else { throw ParseError(message: "a folder can't be combined with other paths") }
         return .open(.folder(plain[0]))
+    }
+
+    private static func isSingleDash(_ argument: String) -> Bool {
+        argument.count > 1 && argument.hasPrefix("-") && !argument.hasPrefix("--")
     }
 
     /// `glance://open?r=<base64url JSON>`.
