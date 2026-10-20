@@ -12,7 +12,8 @@ links:
 
 A native macOS (14+) image viewer: ←/→ through the current folder (or, for a folder with
 Include Subfolders on, its whole tree oldest-first), a thumbnail grid with
-hover-enlarge preview, zoom/pan/fullscreen, and the default handler for every image type
+hover-enlarge preview, zoom/pan/fullscreen, image sets (`glance <files>`), a comparison grid of
+labelled variants (`glance --variant …`), and the default handler for every image type
 except PDF. One Swift package, no Xcode project, no third-party dependencies.
 
 **What's next:** `docs/FOLLOWUPS.md` — deliberately deferred work.
@@ -38,6 +39,7 @@ thin. Anything testable without a window belongs in `GlanceCore`.
 
 - PDF is never listed or claimed — every type set excludes types conforming to `UTType.pdf`.
 - No decoding on the main thread; failures render in place, never as a modal.
+- A set or comparison window (`Scope.fixed`) is never scanned, watched, or reused by an ordinary open.
 - A tree's `FolderModel.files` and `dates` stay parallel (the grid's month sections index
   both): pass a tree's dates to every `replaceFiles(_:dates:)`; a flat folder has none.
 
@@ -55,4 +57,4 @@ hardened runtime. Without that variable the bundle is ad-hoc signed, which runs 
 
 ## Build & test
 
-`just test` (unit tests), `just gate` (pre-merge gate), `just bench` (latency benchmarks).
+`just test` (unit tests), `just gate` (pre-merge gate), `just bench` (latency benchmarks), `just snapshot DIR` (renders the comparison grid, viewer and hover previews off screen to PNGs in DIR).

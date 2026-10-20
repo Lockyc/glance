@@ -10,7 +10,8 @@ the rest of its folder; a full-window thumbnail grid, with an enlarged preview o
 in for jumping around. It opens every image format macOS can decode, plus SVG. PDFs stay with
 Preview. Turn on View → Include Subfolders for a folder and everything under it becomes one
 stream, oldest first, with month headers in the grid — a whole screenshots archive browsed in
-order.
+order. Hand it a handful of files and they open as a set; hand it labelled groups of files and
+it lays the variants out side by side for comparing.
 
 If you've used Xee, it's the same idea: arrow through a folder, as fast as the disk allows.
 glance is free and open source.
@@ -35,8 +36,15 @@ Or build from source, with the Xcode command-line tools (Swift 6) and
 
 ```bash
 git clone https://github.com/lockyc/glance && cd glance
-just install        # builds glance.app into /Applications
+just install        # builds glance.app into /Applications and links `glance` into ~/.local/bin
 just make-default   # makes glance the default viewer for every image type except PDF
+```
+
+`just install` also puts a `glance` command on your PATH (`~/.local/bin`, which must be on it).
+With the release zip, make that link yourself:
+
+```bash
+mkdir -p ~/.local/bin && ln -sf /Applications/glance.app/Contents/MacOS/glance ~/.local/bin/glance
 ```
 
 Opening a file shows it in its folder; opening a folder (or dropping one on the Dock icon)
@@ -71,6 +79,32 @@ or glance → Settings….
 | Esc, G or Space | Back to the viewer |
 | ⌘+ / ⌘− | Larger / smaller tiles (remembered) |
 | Hover | Enlarged preview |
+
+## Sets and comparisons
+
+```bash
+glance <folder>                                  # open a folder
+glance <file>...                                 # open the files as a set
+glance --variant <label> <file>... [--variant <label> <file>...]...
+                                                 # compare labelled variants side by side
+```
+
+A set is just the files you name, in that order; it is never rescanned and Include Subfolders
+doesn't apply. A comparison takes two or more `--variant` groups: each group is a column and each
+file in it a row, so the first file of every variant sits on the first row (a shorter variant leaves its remaining cells
+empty). Every set or
+comparison opens in a new window; a single folder reuses its existing window.
+
+**Comparison**
+
+| Key | Action |
+|---|---|
+| Arrows (grid) | Move the selection between cells |
+| ← / → (viewer) | Same shot in the previous / next variant (wraps) |
+| ↑ / ↓ (viewer) | Previous / next shot in the same variant |
+| Return or click | Open the cell in the viewer |
+| G, Space or Esc | Viewer back to the grid; in the grid, close it to the viewer |
+| ⌘+ / ⌘− | Larger / smaller cells (remembered) |
 
 ## Formats
 
