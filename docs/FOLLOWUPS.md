@@ -35,3 +35,15 @@ Deliberately deferred work. Remove an entry when it ships.
   hint instead of the browser window's folders. Fix: fall back to `NSApp.mainWindow`.
 - **A deleted or moved root keeps its last list**: the failed listing is ignored rather than
   emptying the window (same as a flat folder today).
+- **Comparison row labels scroll away horizontally** when many variants overflow the width; only
+  the header is pinned. Fix: pin the label column like the header.
+- **The empty comparison cell's placeholder has low contrast** against a cell still loading.
+  Fix: a dashed outline or a glyph.
+- **Possible spurious horizontal scroller with always-visible scrollbars** in both grids: the
+  comparison grid sizes its cells before the scrollers appear, and `GridViewController` never
+  autohides its scrollers. Fix: size cells against the content width with scrollers shown.
+- **The comparison viewer prefetches in list order, not 2D**, so ↑/↓ and the row wrap may decode
+  cold. Fix: focus `DecodeCache` on the cell's 2D neighbours.
+- **The cold-launch Open-panel guard (`isDefaultLaunch`) is untested against a real cold launch by
+  URL** or a launch that restores saved state. Fix, if it misfires: set a flag in
+  `application(_:open:)` instead.
