@@ -38,7 +38,7 @@ public enum LaunchRequest: Equatable, Codable {
                glance <file>...                           open files as a set
                glance --variant <label> <file>... [--variant <label> <file>...]...
                                                           compare labelled variants side by side
-        --variant starts a labelled group of files; two or more groups make a comparison.
+        --variant starts a labelled group of files; one or more groups make a comparison.
         """
 
     /// Under Launch Services, no arguments or a leading Cocoa `-flag` means run the app. From a

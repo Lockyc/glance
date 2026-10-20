@@ -90,10 +90,10 @@ glance --variant <label> <file>... [--variant <label> <file>...]...
 ```
 
 A set is just the files you name, in that order; it is never rescanned and Include Subfolders
-doesn't apply. A comparison takes two or more `--variant` groups: each group is a column and each
-file in it a row, so the first file of every variant sits on the first row (a shorter variant leaves its remaining cells
-empty). Every set or
-comparison opens in a new window; a single folder reuses its existing window.
+doesn't apply. A comparison takes one or more `--variant` groups: each group is a column and each
+file in it a row, so the first file of every variant sits on the first row (a shorter variant
+leaves its remaining cells empty). Every set or comparison opens in a new window; a single folder
+reuses its existing window.
 
 **Comparison**
 

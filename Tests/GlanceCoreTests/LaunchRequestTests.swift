@@ -58,6 +58,12 @@ final class LaunchRequestTests: XCTestCase {
         XCTAssertEqual(parsed, .open(expected))
     }
 
+    func testASingleVariantIsAComparison() throws {
+        let dir = Fixtures.tempDir()
+        XCTAssertEqual(try parse(["--variant", "only", "x.png"], in: dir),
+                       .open(.comparison([Variant(label: "only", files: [resolved("x.png", in: dir)])])))
+    }
+
     func testErrors() {
         let dir = Fixtures.tempDir()
         let sub = dir.appendingPathComponent("sub", isDirectory: true)
