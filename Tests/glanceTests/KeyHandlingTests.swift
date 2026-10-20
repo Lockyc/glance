@@ -15,6 +15,8 @@ final class KeyHandlingTests: XCTestCase {
 
     private var right: NSEvent { key(String(UnicodeScalar(NSRightArrowFunctionKey)!), 124) }
     private var left: NSEvent { key(String(UnicodeScalar(NSLeftArrowFunctionKey)!), 123) }
+    private var up: NSEvent { key(String(UnicodeScalar(NSUpArrowFunctionKey)!), 126) }
+    private var down: NSEvent { key(String(UnicodeScalar(NSDownArrowFunctionKey)!), 125) }
     private var home: NSEvent { key(String(UnicodeScalar(NSHomeFunctionKey)!), 115) }
     private var end: NSEvent { key(String(UnicodeScalar(NSEndFunctionKey)!), 119) }
     private var esc: NSEvent { key("\u{1B}", 53) }
@@ -24,8 +26,8 @@ final class KeyHandlingTests: XCTestCase {
         let viewer = ViewerView()
         var commands: [ViewerCommand] = []
         viewer.onCommand = { commands.append($0) }
-        for event in [right, left, home, end, key("g", 5), key(" ", 49), key("f", 3), esc] { viewer.keyDown(with: event) }
-        XCTAssertEqual(commands, [.next, .previous, .first, .last, .toggleGrid, .toggleGrid, .toggleFullScreen, .exitFullScreen])
+        for event in [right, left, up, down, home, end, key("g", 5), key(" ", 49), key("f", 3), esc] { viewer.keyDown(with: event) }
+        XCTAssertEqual(commands, [.next, .previous, .up, .down, .first, .last, .toggleGrid, .toggleGrid, .toggleFullScreen, .exitFullScreen])
     }
 
     func testWindowNavigatesAndRoundTripsThroughTheGrid() throws {

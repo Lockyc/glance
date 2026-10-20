@@ -1,7 +1,7 @@
 import AppKit
 import GlanceCore
 
-/// One window per folder. Owns the folder model, its watcher and the prefetch cache, and swaps
+/// One window per folder, set or comparison. Owns the folder model, its watcher and the prefetch cache, and swaps
 /// between the viewer and the grid (both stay alive, so the grid keeps its scroll position).
 final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     let model: FolderModel
@@ -9,7 +9,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     private let decodeCache: DecodeCache
     private let viewer: ViewerView
-    private let grid: GridViewController
+    private let grid: any BrowserGrid
+    /// Set for a comparison window: the grid is the variant × shot grid and the viewer steps in 2D.
+    private let comparison: Comparison?
     private var showingGrid = false
     /// Full-detail re-decodes for zoom run one at a time; a newer request or a change of file cancels the last.
     private let upgrades: OperationQueue = {
@@ -31,11 +33,14 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     /// The root's top-level folders, read by the scan so View → Subfolders never touches the disk.
     private var rootFolders: [String] = []
 
-    init(model: FolderModel, thumbnails: ThumbnailService, startInGrid: Bool, roots: SubfolderRoots = .shared, landing: URL? = nil) {
+    init(model: FolderModel, thumbnails: ThumbnailService, startInGrid: Bool, roots: SubfolderRoots = .shared, landing: URL? = nil,
+         comparison: Comparison? = nil) {
         // Locals, not self.viewer/self.grid: self can't be read before super.init.
         let viewer = ViewerView()
-        let grid = GridViewController(model: model, thumbnails: thumbnails)
+        let grid: any BrowserGrid = comparison.map { ComparisonGridViewController(comparison: $0, thumbnails: thumbnails) }
+            ?? GridViewController(model: model, thumbnails: thumbnails)
         self.model = model
+        self.comparison = comparison
         self.roots = roots
         self.landing = landing
         self.viewer = viewer
@@ -231,20 +236,42 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         }
         // From the cache, not the viewer: while the new image decodes, the viewer still shows the old one.
         let size = (try? decodeCache.result(for: url)?.get())?.pixelSize
-        window.title = ViewerTitle.text(fileName: url.lastPathComponent, index: index, count: model.files.count, pixelSize: size)
+        if let comparison {
+            let cell = comparison.cells[index]
+            window.title = ViewerTitle.comparison(variant: comparison.variants[cell.column].label, row: comparison.rowLabel(cell.row),
+                                                  fileName: url.lastPathComponent, pixelSize: size)
+        } else {
+            window.title = ViewerTitle.text(fileName: url.lastPathComponent, index: index, count: model.files.count, pixelSize: size)
+        }
         window.representedURL = url
     }
 
     private func handle(_ command: ViewerCommand) {
+        let fullScreen = window?.styleMask.contains(.fullScreen) == true
         switch command {
-        case .next: model.move(by: 1)
-        case .previous: model.move(by: -1)
+        case .next: comparison == nil ? model.move(by: 1) : step(.right)
+        case .previous: comparison == nil ? model.move(by: -1) : step(.left)
+        case .up: step(.up)
+        case .down: step(.down)
         case .first: model.moveToFirst()
         case .last: model.moveToLast()
         case .toggleGrid: toggleGrid(nil)
         case .toggleFullScreen: window?.toggleFullScreen(nil)
-        case .exitFullScreen: if window?.styleMask.contains(.fullScreen) == true { window?.toggleFullScreen(nil) }
+        case .exitFullScreen:
+            if fullScreen {
+                window?.toggleFullScreen(nil)
+            } else if comparison != nil {
+                showGrid()
+            }
         }
+    }
+
+    /// A comparison's 2D step from the current cell; without a comparison there is no up or down.
+    private func step(_ move: Comparison.Move) {
+        guard let comparison, let index = model.currentIndex,
+              let target = comparison.viewerStep(from: comparison.cells[index], move),
+              let next = comparison.cells.firstIndex(of: target) else { return }
+        model.select(next)
     }
 
     private func decodeHigherResolution(_ url: URL, _ pixels: Int) {

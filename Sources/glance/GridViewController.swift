@@ -1,7 +1,7 @@
 import AppKit
 import GlanceCore
 
-final class GridViewController: NSViewController, NSCollectionViewDataSource, ZoomActions {
+final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewDataSource, ZoomActions {
     var onOpen: ((Int) -> Void)?
     var onExit: (() -> Void)?
 

@@ -58,11 +58,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Always a new window on exactly `files`, in order; never reused by a later open.
-    func openSet(_ files: [URL]) {
+    func openSet(_ files: [URL]) { openFixed(files, comparison: nil) }
+
+    /// Always a new window, opening in the comparison grid; never reused by a later open.
+    func openComparison(_ comparison: Comparison) { openFixed(comparison.files, comparison: comparison) }
+
+    private func openFixed(_ files: [URL], comparison: Comparison?) {
         guard let first = files.first else { return }
         let model = FolderModel(folder: first.deletingLastPathComponent(), files: files.map(FolderModel.canonical),
                                 current: nil, scope: .fixed)
-        let controller = BrowserWindowController(model: model, thumbnails: thumbnails, startInGrid: false, roots: roots)
+        present(BrowserWindowController(model: model, thumbnails: thumbnails, startInGrid: comparison != nil, roots: roots,
+                                        comparison: comparison))
+    }
+
+    private func present(_ controller: BrowserWindowController) {
         controller.onClose = { [weak self, weak controller] in self?.controllers.removeAll { $0 === controller } }
         controllers.append(controller)
         controller.showWindow(nil)
@@ -93,10 +102,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let seeded = file.map { [FolderModel.canonical($0)] } ?? []
         let model = FolderModel(folder: folder, files: seeded, current: file, scope: scope,
                                 dates: scope == .flat ? [] : seeded.map { _ in .distantPast })
-        let controller = BrowserWindowController(model: model, thumbnails: thumbnails, startInGrid: isFolder,
-                                                 roots: roots, landing: landing)
-        controller.onClose = { [weak self, weak controller] in self?.controllers.removeAll { $0 === controller } }
-        controllers.append(controller)
-        controller.showWindow(nil)
+        present(BrowserWindowController(model: model, thumbnails: thumbnails, startInGrid: isFolder, roots: roots, landing: landing))
     }
 }
