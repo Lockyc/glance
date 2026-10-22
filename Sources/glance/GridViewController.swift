@@ -29,6 +29,11 @@ final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewD
 
     var firstResponderView: NSView { collectionView }
 
+    var selectedFiles: [URL] {
+        collectionView.selectionIndexPaths.compactMap(sections.index(for:)).sorted()
+            .compactMap { listed.indices.contains($0) ? listed[$0] : nil }
+    }
+
     private var tileSide: CGFloat {
         get {
             let stored = UserDefaults.standard.double(forKey: Self.tileSideKey)
@@ -53,6 +58,7 @@ final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewD
         collectionView.collectionViewLayout = layout
         collectionView.dataSource = self
         collectionView.isSelectable = true
+        collectionView.allowsMultipleSelection = true
         collectionView.backgroundColors = [NSColor(white: 0.08, alpha: 1)]
         collectionView.register(ThumbnailItem.self, forItemWithIdentifier: ThumbnailItem.identifier)
         collectionView.register(MonthHeaderView.self, forSupplementaryViewOfKind: NSCollectionView.elementKindSectionHeader,

@@ -36,6 +36,8 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
 
     var firstResponderView: NSView { grid }
 
+    var selectedFiles: [URL] { comparison.file(at: grid.selection).map { [$0] } ?? [] }
+
     private static var storedMinimumSide: CGFloat {
         let stored = UserDefaults.standard.double(forKey: minimumSideKey)
         return stored > 0 ? stored : ComparisonLayout.defaultMinimumSide
@@ -274,6 +276,7 @@ final class ComparisonGridView: NSView {
         case .activate: activate(selection)
         case .exit: onExit?()
         case .toggleFullScreen: window?.toggleFullScreen(nil)
+        case .editInExcerpt: _ = window?.tryToPerform(#selector(BrowserWindowController.editInExcerpt(_:)), with: nil)
         case .arrow(let direction): move(direction)
         case nil: super.keyDown(with: event)
         }
