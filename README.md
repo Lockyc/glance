@@ -63,6 +63,7 @@ or glance → Settings….
 | G or Space | Thumbnail grid |
 | F or ⌃⌘F | Toggle full screen |
 | Esc | Leave full screen |
+| E or ⌘E | Edit in Excerpt (PNG only) |
 | 0 / 1 | Fit to window / actual size |
 | + / − | Zoom in / out |
 | Pinch or ⌘-scroll | Zoom about the cursor |
@@ -76,6 +77,8 @@ or glance → Settings….
 | ← / → | Select the previous / next tile (across months) |
 | ↑ / ↓ | Move the selection by row |
 | Return or click | Open the image |
+| ⌘-click / ⇧-click | Select several tiles |
+| E or ⌘E | Edit the selected images in Excerpt, as one series (PNG only) |
 | Esc, G or Space | Back to the viewer |
 | ⌘+ / ⌘− | Larger / smaller tiles (remembered) |
 | Hover | Enlarged preview |

@@ -7,6 +7,8 @@ protocol BrowserGrid: AnyObject {
     var firstResponderView: NSView { get }
     var onOpen: ((Int) -> Void)? { get set }
     var onExit: (() -> Void)? { get set }
+    /// The selected files, in grid order: what Edit in Excerpt sends.
+    var selectedFiles: [URL] { get }
     func reload()
     func reveal(_ index: Int?)
 }

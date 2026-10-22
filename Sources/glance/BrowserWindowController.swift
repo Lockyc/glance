@@ -7,6 +7,22 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     let model: FolderModel
     var onClose: (() -> Void)?
 
+    /// Where Edit in Excerpt sends images; tests swap it for a recorder.
+    struct Excerpt {
+        var installed: () -> Bool
+        var open: ([URL]) -> Void
+
+        /// The installed Excerpt, handed every image in one open so it takes them as one series.
+        static let system = Excerpt(
+            installed: { NSWorkspace.shared.urlForApplication(withBundleIdentifier: ExternalEditor.excerptBundleIdentifier) != nil },
+            open: { urls in
+                guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: ExternalEditor.excerptBundleIdentifier)
+                else { return }
+                NSWorkspace.shared.open(urls, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+            })
+    }
+    var excerpt = Excerpt.system
+
     private let decodeCache: DecodeCache
     private let viewer: ViewerView
     private let grid: any BrowserGrid
@@ -255,6 +271,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case .last: model.moveToLast()
         case .toggleGrid: toggleGrid(nil)
         case .toggleFullScreen: window?.toggleFullScreen(nil)
+        case .editInExcerpt: editInExcerpt(nil)
         case .exitFullScreen:
             if fullScreen {
                 window?.toggleFullScreen(nil)
@@ -290,8 +307,29 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) { onClose?() }
 }
 
+extension BrowserWindowController {
+    /// The grid's selection while the grid shows, else the image in view.
+    private var editTargets: [URL] { showingGrid ? grid.selectedFiles : model.current.map { [$0] } ?? [] }
+
+    private var editRefusal: String? { ExternalEditor.refusal(for: editTargets, installed: excerpt.installed()) }
+
+    /// File → Edit in Excerpt, or E: several images open there as one series.
+    @objc func editInExcerpt(_ sender: Any?) {
+        guard editRefusal == nil else {
+            NSSound.beep()
+            return
+        }
+        excerpt.open(editTargets)
+    }
+}
+
 extension BrowserWindowController: NSMenuItemValidation {
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == #selector(editInExcerpt(_:)) {
+            let refusal = editRefusal
+            item.toolTip = refusal
+            return refusal == nil
+        }
         if model.scope == .fixed, item.action == #selector(toggleSubfolders(_:)) || item.action == #selector(toggleExcludedSubfolder(_:)) {
             return false
         }

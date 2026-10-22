@@ -6,6 +6,7 @@ enum GridKey: Equatable {
     case activate
     case exit
     case toggleFullScreen
+    case editInExcerpt
     case arrow(Comparison.Move)
 
     static func from(_ event: NSEvent) -> GridKey? {
@@ -22,6 +23,7 @@ enum GridKey: Equatable {
             switch event.charactersIgnoringModifiers {
             case "g", " ": return .exit
             case "f": return .toggleFullScreen
+            case "e": return .editInExcerpt
             default: return nil
             }
         }

@@ -1,7 +1,8 @@
 import AppKit
 
 /// ↑/↓ are NSCollectionView's own selection movement; ←/→ step through the flat order (crossing
-/// month sections); this adds open/exit keys and single-click-to-open.
+/// month sections); this adds open/exit/edit keys and single-click-to-open, with ⌘- and ⇧-click
+/// selecting several tiles instead.
 final class GridCollectionView: NSCollectionView {
     var onActivate: ((IndexPath) -> Void)?
     var onStep: ((Int) -> Void)?
@@ -12,6 +13,7 @@ final class GridCollectionView: NSCollectionView {
         case .activate: if let path = selectionIndexPaths.first { onActivate?(path) }
         case .exit: onExit?()
         case .toggleFullScreen: window?.toggleFullScreen(nil)
+        case .editInExcerpt: _ = window?.tryToPerform(#selector(BrowserWindowController.editInExcerpt(_:)), with: nil)
         case .arrow(.left): onStep?(-1)
         case .arrow(.right): onStep?(1)
         case .arrow(.up), .arrow(.down), nil: super.keyDown(with: event)
@@ -19,7 +21,8 @@ final class GridCollectionView: NSCollectionView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        if let path = indexPathForItem(at: convert(event.locationInWindow, from: nil)) {
+        let extending = !event.modifierFlags.intersection([.command, .shift]).isEmpty
+        if !extending, let path = indexPathForItem(at: convert(event.locationInWindow, from: nil)) {
             onActivate?(path)
         } else {
             super.mouseDown(with: event)
