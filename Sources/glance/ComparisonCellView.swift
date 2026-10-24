@@ -59,15 +59,8 @@ final class ComparisonCellView: NSView {
         request = service.request(url, pixelSize: pixelSize) { [weak self] result in
             guard let self, self.url == url else { return }
             self.isLoading = false
-            switch result {
-            case .success(let image):
-                self.image = image
-                self.imageLayer.contentsGravity = .resizeAspect
-                self.imageLayer.contents = image
-            case .failure:
-                self.imageLayer.contentsGravity = .center
-                self.imageLayer.contents = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: "Can't open")
-            }
+            if case .success(let image) = result { self.image = image }
+            self.imageLayer.showThumbnail(try? result.get())
         }
     }
 }
