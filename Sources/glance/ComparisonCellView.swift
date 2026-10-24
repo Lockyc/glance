@@ -1,14 +1,14 @@
 import AppKit
 import GlanceCore
 
-/// One comparison cell: the image aspect-fitted in the whole cell, a spinner until its first
+/// One comparison cell: the image aspect-fitted in the whole cell, TV static until its first
 /// thumbnail arrives, or a muted fill when the variant has no file for this shot, so every cell
 /// keeps the same size.
 final class ComparisonCellView: NSView {
     private let imageLayer = CALayer()
-    private let spinner = NSProgressIndicator.thumbnailSpinner()
+    private let staticLayer = StaticLayer()
     private(set) var isLoading = false {
-        didSet { isLoading ? spinner.startAnimation(nil) : spinner.stopAnimation(nil) }
+        didSet { staticLayer.isAnimating = isLoading }
     }
     private var request: Operation?
     private var requestedPixels = 0
@@ -23,8 +23,8 @@ final class ComparisonCellView: NSView {
         imageLayer.backgroundColor = NSColor(white: 1, alpha: 0.06).cgColor
         imageLayer.borderColor = NSColor.controlAccentColor.cgColor
         imageLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull(), "borderWidth": NSNull()]
+        imageLayer.addSublayer(staticLayer)
         layer?.addSublayer(imageLayer)
-        addSubview(spinner)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
@@ -35,7 +35,7 @@ final class ComparisonCellView: NSView {
     override func layout() {
         super.layout()
         imageLayer.frame = imageRect
-        spinner.center(in: imageRect)
+        staticLayer.frame = imageLayer.bounds
     }
 
     var isSelected = false {

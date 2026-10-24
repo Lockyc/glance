@@ -61,16 +61,17 @@ final class SnapshotTests: XCTestCase {
         })
     }
 
-    private func window(_ comparison: Comparison, size: NSSize) throws -> NSWindow {
+    private func window(_ comparison: Comparison, size: NSSize, decoder: any ImageDecoding = ImageDecoder()) throws -> NSWindow {
         let model = FolderModel(folder: dir, files: comparison.files.map(FolderModel.canonical), current: nil, scope: .fixed)
-        return try window(model: model, comparison: comparison, size: size)
+        return try window(model: model, comparison: comparison, size: size, decoder: decoder)
     }
 
     /// Built as the app builds it, but never shown: the content size is set and laid out directly.
-    private func window(model: FolderModel, comparison: Comparison?, size: NSSize) throws -> NSWindow {
+    private func window(model: FolderModel, comparison: Comparison?, size: NSSize,
+                        decoder: any ImageDecoding = ImageDecoder()) throws -> NSWindow {
         let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
-        let controller = BrowserWindowController(model: model, thumbnails: ThumbnailService(cacheDirectory: cache), startInGrid: true,
-                                                 comparison: comparison)
+        let controller = BrowserWindowController(model: model, thumbnails: ThumbnailService(decoder: decoder, cacheDirectory: cache),
+                                                 startInGrid: true, comparison: comparison)
         controllers.append(controller)
         let window = try XCTUnwrap(controller.window)
         window.setContentSize(size)
@@ -141,6 +142,13 @@ final class SnapshotTests: XCTestCase {
         try snapshot(window, "comparison-grid.png")
     }
 
+    /// Every cell still waiting on its thumbnail, so each shows its static.
+    func testComparisonGridLoading() throws {
+        let window = try window(try comparison([("a", [.wide, .tall]), ("b", [.wide]), ("c", [.square, .wide])]),
+                                size: NSSize(width: 1400, height: 900), decoder: StalledDecoder())
+        try snapshot(window, "comparison-loading.png")
+    }
+
     func testComparisonGridOverflow() throws {
         let shapes: [Shape] = [.wide, .tall, .square, .wide, .tall, .square]
         let window = try window(try comparison(["a", "b", "c", "d"].map { ($0, shapes) }), size: NSSize(width: 900, height: 600))
@@ -196,5 +204,13 @@ final class SnapshotTests: XCTestCase {
         controller.mouseMoved(with: mouseMoved(to: second.view, in: window))
         spin(until: "the thumbnail hover preview", timeout: HoverPreview.delay + 5) { previewShown(window) }
         try snapshot(window, "thumbnail-hover.png")
+    }
+}
+
+/// Never delivers within a snapshot's lifetime, so the cells stay loading.
+private final class StalledDecoder: ImageDecoding {
+    func decode(_ url: URL, maxPixelSize: Int) -> Result<DecodedImage, DecodeError> {
+        Thread.sleep(forTimeInterval: 2)
+        return .failure(.unreadable)
     }
 }
