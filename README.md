@@ -26,14 +26,18 @@ glance is free and open source.
 
 ## Install
 
-Needs macOS 14+. Download the signed, notarized
-[`glance.zip`](https://github.com/lockyc/glance/releases/latest/download/glance.zip), unzip it
-and move `glance.app` to `/Applications`. To make it the default viewer for every image type
-except PDF:
+Needs macOS 14+.
 
 ```bash
-/Applications/glance.app/Contents/MacOS/glance --make-default
+curl -fsSL https://raw.githubusercontent.com/lockyc/glance/main/install.sh | bash
+glance --make-default   # optional: the default viewer for every image type except PDF
 ```
+
+The installer downloads the latest release, checks that it is signed by glance's developer and
+notarized by Apple, then installs `/Applications/glance.app` and links the `glance` command into
+`~/.local/bin`, which must be on your PATH. Run it again to update. From a clone of this repo,
+Claude Code's `/glance:install` runs the same install and checks the command works from a new
+shell.
 
 Or build from source, with the Xcode command-line tools (Swift 6) and
 [`just`](https://github.com/casey/just):
@@ -42,13 +46,6 @@ Or build from source, with the Xcode command-line tools (Swift 6) and
 git clone https://github.com/lockyc/glance && cd glance
 just install        # builds glance.app into /Applications and links `glance` into ~/.local/bin
 just make-default   # makes glance the default viewer for every image type except PDF
-```
-
-`just install` also puts a `glance` command on your PATH (`~/.local/bin`, which must be on it).
-With the release zip, make that link yourself:
-
-```bash
-mkdir -p ~/.local/bin && ln -sf /Applications/glance.app/Contents/MacOS/glance ~/.local/bin/glance
 ```
 
 Opening a file shows it in its folder; opening a folder (or dropping one on the Dock icon)
