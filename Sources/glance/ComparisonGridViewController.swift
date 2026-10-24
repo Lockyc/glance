@@ -173,7 +173,9 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
 }
 
 /// The grid's document view and first responder: arrows move the selection in 2D (onto empty
-/// cells too), Return or a click opens a present cell, G/Space/Esc go back to the viewer.
+/// cells too), Return or a click opens a present cell, and G/Space/Esc open the viewer on the
+/// selected cell — or, on an empty one, go back to the viewer as it was. The highlighted cell is
+/// what the user reads as current, so leaving the grid never ignores it.
 final class ComparisonGridView: NSView {
     var onActivate: ((Comparison.Cell) -> Void)?
     var onExit: (() -> Void)?
@@ -278,7 +280,7 @@ final class ComparisonGridView: NSView {
     override func keyDown(with event: NSEvent) {
         switch GridKey.from(event) {
         case .activate: activate(selection)
-        case .exit: onExit?()
+        case .exit: comparison.file(at: selection) != nil ? onActivate?(selection) : onExit?()
         case .toggleFullScreen: window?.toggleFullScreen(nil)
         case .editInExcerpt: _ = window?.tryToPerform(#selector(BrowserWindowController.editInExcerpt(_:)), with: nil)
         case .arrow(let direction): move(direction)
