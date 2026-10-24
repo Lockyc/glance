@@ -96,9 +96,10 @@ glance --variant <label> <file>... [--variant <label> <file>...]...
 A set is just the files you name, in that order; it is never rescanned and Include Subfolders
 doesn't apply. A comparison takes one or more `--variant` groups: each group is a column and each
 file in it a row, so the first file of every variant sits on the first row (a shorter variant
-leaves its remaining cells empty). Opening a cell keeps the grid in view: its shot in every
-variant along the bottom and a map of the whole grid in the corner, both clickable; View → Show
-Comparison Context hides them (remembered). Every set or comparison opens in a new window; a single
+leaves its remaining cells empty). Opening a cell keeps the grid's edges in view: every variant
+along the top and every shot down the left, the current ones highlighted, and a map of the whole
+grid in the corner; click a label or a map cell to jump there. View → Show Comparison Context hides
+them (remembered). Every set or comparison opens in a new window; a single
 folder reuses its existing window.
 
 **Comparison**
@@ -109,7 +110,7 @@ folder reuses its existing window.
 | ← / → (viewer) | Same shot in the previous / next variant (wraps) |
 | ↑ / ↓ (viewer) | Previous / next shot in the same variant |
 | Return or click | Open the cell in the viewer |
-| Click strip or map (viewer) | Open that cell |
+| Click a header or the map (viewer) | Open that cell |
 | G / Space / Esc (grid) | Open the viewer on the current cell |
 | G / Space (viewer) | Back to the grid |
 | Esc (viewer) | Leave full screen, otherwise back to the grid |
