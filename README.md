@@ -35,7 +35,8 @@ glance --make-default   # optional: the default viewer for every image type exce
 
 The installer downloads the latest release, checks that it is signed by glance's developer and
 notarized by Apple, then installs `/Applications/glance.app` and links the `glance` command into
-`~/.local/bin`, which must be on your PATH. Run it again to update. From a clone of this repo,
+`~/.local/bin`, which must be on your PATH. After that glance updates itself: it checks daily,
+and **glance → Check for Updates…** checks now. From a clone of this repo,
 Claude Code's `/glance:install` runs the same install and checks the command works from a new
 shell.
 
