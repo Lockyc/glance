@@ -137,6 +137,92 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertEqual(decoder.sizes.count, present.count, "one decode per cell, none at a provisional size")
     }
 
+    // MARK: Context (strip + map) in the viewer
+
+    private var viewer: ViewerView { controller.window!.contentView!.subviews.compactMap { $0 as? ViewerView }.first! }
+
+    /// A single click at a point in the context view's coordinates, delivered to whatever the window hit-tests there.
+    private func click(_ point: CGPoint, in context: ComparisonContextView) {
+        let location = context.convert(point, to: nil)
+        let event = NSEvent.mouseEvent(with: .leftMouseDown, location: location, modifierFlags: [], timestamp: 0,
+                                       windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+        let content = try! XCTUnwrap(window.contentView)
+        content.hitTest(content.convert(location, from: nil))?.mouseDown(with: event)
+    }
+
+    private func stripClick(column: Int) throws {
+        let context = try XCTUnwrap(controller.context)
+        let frame = context.stripFrame(column: column)
+        click(CGPoint(x: frame.midX, y: frame.midY), in: context)
+    }
+
+    func testContextShowsInTheViewerOnly() throws {
+        let context = try XCTUnwrap(controller.context)
+        XCTAssertTrue(context.isHidden)
+        press(enter)
+        XCTAssertFalse(context.isHidden)
+        XCTAssertEqual(viewer.frame.minY, ComparisonContextView.stripHeight)
+        press(esc)
+        XCTAssertTrue(context.isHidden)
+    }
+
+    func testStripFollowsTheRowAndHighlightsTheCurrentCell() throws {
+        press(enter)
+        press(down)
+        XCTAssertEqual(model.current, url("a2"))
+        let strip = try XCTUnwrap(controller.context).stripCells
+        XCTAssertEqual(strip.map(\.url), [url("a2"), nil, url("c2")])
+        XCTAssertEqual(strip.map(\.isSelected), [true, false, false])
+    }
+
+    func testClickingAStripCellOpensIt() throws {
+        press(enter)
+        try stripClick(column: 2)
+        XCTAssertEqual(model.current, url("c1"))
+    }
+
+    func testClickingAnEmptyStripCellDoesNothing() throws {
+        press(enter)
+        press(down)
+        try stripClick(column: 1)
+        XCTAssertEqual(model.current, url("a2"))
+    }
+
+    func testClickingTheMapOpensThatCell() throws {
+        press(enter)
+        let context = try XCTUnwrap(controller.context)
+        let rect = ComparisonMapLayout.rect(of: cell(1, 2), columns: 3, rows: 2)
+        click(CGPoint(x: context.mapFrame.minX + rect.midX, y: context.mapFrame.minY + rect.midY), in: context)
+        XCTAssertEqual(model.current, url("c2"))
+    }
+
+    func testClickingTheStripKeepsTheViewerFocused() throws {
+        press(enter)
+        try stripClick(column: 2)
+        XCTAssertTrue(window.firstResponder is ViewerView)
+        press(right)
+        XCTAssertEqual(model.current, url("a1"), "wraps from c1 to a1")
+    }
+
+    func testClickOverThePhotoStillReachesTheViewer() throws {
+        press(enter)
+        let content = try XCTUnwrap(window.contentView)
+        let centre = CGPoint(x: content.bounds.midX, y: content.bounds.midY)
+        XCTAssertTrue(content.hitTest(centre) is ViewerView)
+    }
+
+    func testStripCellsShareTheWidth() {
+        let wide = Comparison(variants: (0..<12).map { Variant(label: "v\($0)", files: [URL(fileURLWithPath: "/x/v\($0).png")]) })
+        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
+        let context = ComparisonContextView(comparison: wide, thumbnails: ThumbnailService(decoder: decoder, cacheDirectory: cache))
+        context.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
+        context.layoutSubtreeIfNeeded()
+        let frames = (0..<12).map(context.stripFrame(column:))
+        XCTAssertLessThanOrEqual(frames[11].maxX, 600 - 6)
+        XCTAssertGreaterThanOrEqual(frames[0].minX, 6)
+        XCTAssertEqual(Set(frames.map(\.width)).count, 1)
+    }
+
     func testEmptyCellIsAPlaceholderInPlace() throws {
         let grid = try XCTUnwrap(window.firstResponder as? ComparisonGridView)
         XCTAssertEqual(grid.cellViews.count, 6)
