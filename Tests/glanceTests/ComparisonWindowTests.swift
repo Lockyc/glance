@@ -25,6 +25,7 @@ final class ComparisonWindowTests: XCTestCase {
 
     override func setUpWithError() throws {
         _ = NSApplication.shared
+        UserDefaults.standard.removeObject(forKey: BrowserWindowController.contextKey)
         dir = FileManager.default.temporaryDirectory.appendingPathComponent("glance-comparison-\(UUID().uuidString)").resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         for name in ["a1", "a2", "b1", "c1", "c2"] { writeTestPNG(to: url(name)) }
@@ -42,7 +43,10 @@ final class ComparisonWindowTests: XCTestCase {
         window.layoutIfNeeded()
     }
 
-    override func tearDown() { controller.close() }
+    override func tearDown() {
+        controller.close()
+        UserDefaults.standard.removeObject(forKey: BrowserWindowController.contextKey)
+    }
 
     private func url(_ name: String) -> URL { dir.appendingPathComponent("\(name).png") }
 
@@ -209,6 +213,45 @@ final class ComparisonWindowTests: XCTestCase {
         let content = try XCTUnwrap(window.contentView)
         let centre = CGPoint(x: content.bounds.midX, y: content.bounds.midY)
         XCTAssertTrue(content.hitTest(centre) is ViewerView)
+    }
+
+    func testToggleHidesTheContextAndTheViewerFillsTheWindow() throws {
+        press(enter)
+        let context = try XCTUnwrap(controller.context)
+        controller.toggleComparisonContext(nil)
+        XCTAssertTrue(context.isHidden)
+        XCTAssertEqual(viewer.frame, window.contentView!.bounds)
+        XCTAssertEqual(UserDefaults.standard.object(forKey: BrowserWindowController.contextKey) as? Bool, false)
+        controller.toggleComparisonContext(nil)
+        XCTAssertFalse(context.isHidden)
+        XCTAssertEqual(viewer.frame.minY, ComparisonContextView.stripHeight)
+    }
+
+    func testToggleWhileInTheGridStaysHidden() throws {
+        let context = try XCTUnwrap(controller.context)
+        controller.toggleComparisonContext(nil)
+        controller.toggleComparisonContext(nil)
+        XCTAssertTrue(context.isHidden)
+        press(enter)
+        XCTAssertFalse(context.isHidden)
+    }
+
+    func testOffStaysOffWhenReturningFromTheGrid() throws {
+        press(enter)
+        controller.toggleComparisonContext(nil)
+        press(esc)
+        press(esc)
+        XCTAssertTrue(window.firstResponder is ViewerView)
+        XCTAssertEqual(controller.context?.isHidden, true)
+    }
+
+    func testMenuItemReflectsTheSetting() {
+        let item = NSMenuItem(title: "", action: #selector(BrowserWindowController.toggleComparisonContext(_:)), keyEquivalent: "")
+        XCTAssertTrue(controller.validateMenuItem(item))
+        XCTAssertEqual(item.state, .on)
+        controller.toggleComparisonContext(nil)
+        XCTAssertTrue(controller.validateMenuItem(item))
+        XCTAssertEqual(item.state, .off)
     }
 
     func testStripCellsShareTheWidth() {
