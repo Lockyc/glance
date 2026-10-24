@@ -132,18 +132,28 @@ public enum ComparisonMapLayout {
     public static let gap: CGFloat = 2
     public static let inset: CGFloat = 5
 
-    /// Shrinks to fit `maxSize` but never below `minCellSide`: a long comparison grows the map instead.
-    public static func cellSide(columns: Int, rows: Int) -> CGFloat {
-        func fit(_ count: Int, _ space: CGFloat) -> CGFloat {
+    public static let unbounded = CGSize(width: CGFloat.infinity, height: .infinity)
+
+    /// Shrinks to fit `maxSize`, then stops at `minCellSide` so cells stay clickable and the map grows
+    /// instead, but never past `bound` (the space it may cover): there the gaps go and cells shrink
+    /// again, to a point.
+    public static func cellSide(columns: Int, rows: Int, bound: CGSize = unbounded) -> CGFloat {
+        func fit(_ count: Int, _ space: CGFloat, _ gap: CGFloat) -> CGFloat {
             let n = CGFloat(max(count, 1))
             return (space - 2 * inset - gap * (n - 1)) / n
         }
-        let side = min(fit(columns, maxSize.width), fit(rows, maxSize.height))
-        return min(maxCellSide, max(minCellSide, side))
+        let side = min(maxCellSide, max(minCellSide, min(fit(columns, maxSize.width, gap), fit(rows, maxSize.height, gap))))
+        let bounded = min(fit(columns, bound.width, gap), fit(rows, bound.height, gap))
+        if bounded >= minCellSide { return min(side, bounded) }
+        // Below minCellSide cellGap is 0, so the gapless fit must stay below it too.
+        return max(1, min(minCellSide.nextDown, fit(columns, bound.width, 0), fit(rows, bound.height, 0)))
     }
 
-    public static func size(columns: Int, rows: Int) -> CGSize {
-        let side = cellSide(columns: columns, rows: rows)
+    /// The gap between cells: none once cells are below `minCellSide`.
+    public static func cellGap(side: CGFloat) -> CGFloat { side < minCellSide ? 0 : gap }
+
+    public static func size(columns: Int, rows: Int, bound: CGSize = unbounded) -> CGSize {
+        let side = cellSide(columns: columns, rows: rows, bound: bound), gap = cellGap(side: side)
         func extent(_ count: Int) -> CGFloat {
             let n = CGFloat(max(count, 1))
             return 2 * inset + n * side + (n - 1) * gap
@@ -152,19 +162,19 @@ public enum ComparisonMapLayout {
     }
 
     /// Top-left origin, for a flipped view.
-    public static func rect(of cell: Comparison.Cell, columns: Int, rows: Int) -> CGRect {
-        let side = cellSide(columns: columns, rows: rows)
-        return CGRect(x: inset + CGFloat(cell.column) * (side + gap), y: inset + CGFloat(cell.row) * (side + gap),
-                      width: side, height: side)
+    public static func rect(of cell: Comparison.Cell, columns: Int, rows: Int, bound: CGSize = unbounded) -> CGRect {
+        let side = cellSide(columns: columns, rows: rows, bound: bound), pitch = side + cellGap(side: side)
+        return CGRect(x: inset + CGFloat(cell.column) * pitch, y: inset + CGFloat(cell.row) * pitch, width: side, height: side)
     }
 
     /// nil outside the grid or in a gap.
-    public static func cell(at point: CGPoint, columns: Int, rows: Int) -> Comparison.Cell? {
-        let pitch = cellSide(columns: columns, rows: rows) + gap
+    public static func cell(at point: CGPoint, columns: Int, rows: Int, bound: CGSize = unbounded) -> Comparison.Cell? {
+        let side = cellSide(columns: columns, rows: rows, bound: bound), pitch = side + cellGap(side: side)
         let x = point.x - inset, y = point.y - inset
         guard x >= 0, y >= 0 else { return nil }
         let cell = Comparison.Cell(row: Int(y / pitch), column: Int(x / pitch))
-        guard cell.row < rows, cell.column < columns, rect(of: cell, columns: columns, rows: rows).contains(point) else { return nil }
+        guard cell.row < rows, cell.column < columns,
+              rect(of: cell, columns: columns, rows: rows, bound: bound).contains(point) else { return nil }
         return cell
     }
 }
