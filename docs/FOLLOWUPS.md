@@ -37,8 +37,6 @@ Deliberately deferred work. Remove an entry when it ships.
   emptying the window (same as a flat folder today).
 - **Comparison row labels scroll away horizontally** when many variants overflow the width; only
   the header is pinned. Fix: pin the label column like the header.
-- **The empty comparison cell's placeholder has low contrast** against a cell still loading.
-  Fix: a dashed outline or a glyph.
 - **Possible spurious horizontal scroller with always-visible scrollbars** in both grids: the
   comparison grid sizes its cells before the scrollers appear, and `GridViewController` never
   autohides its scrollers. Fix: size cells against the content width with scrollers shown.
