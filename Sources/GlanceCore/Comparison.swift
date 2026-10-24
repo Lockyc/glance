@@ -85,27 +85,20 @@ public struct Comparison: Equatable {
         }
     }
 
-    /// Skips empty cells. ←/→ wrap within the row; ↑/↓ are nil when no present cell lies that way in the column.
+    /// The nearest present cell that way, skipping empty ones; nil at the grid's edge. Never wraps.
     public func viewerStep(from cell: Cell, _ move: Move) -> Cell? {
-        switch move {
-        case .left, .right:
-            let step = move == .right ? 1 : -1
-            for offset in 1..<max(columns, 2) {
-                let column = ((cell.column + step * offset) % columns + columns) % columns
-                let candidate = Cell(row: cell.row, column: column)
-                if file(at: candidate) != nil { return candidate }
-            }
-            return nil
-        case .up, .down:
-            let step = move == .down ? 1 : -1
-            var row = cell.row + step
-            while row >= 0 && row < rows {
-                let candidate = Cell(row: row, column: cell.column)
-                if file(at: candidate) != nil { return candidate }
-                row += step
-            }
-            return nil
+        let (dr, dc) = switch move {
+        case .left: (0, -1)
+        case .right: (0, 1)
+        case .up: (-1, 0)
+        case .down: (1, 0)
         }
+        var candidate = Cell(row: cell.row + dr, column: cell.column + dc)
+        while candidate.row >= 0, candidate.row < rows, candidate.column >= 0, candidate.column < columns {
+            if file(at: candidate) != nil { return candidate }
+            candidate = Cell(row: candidate.row + dr, column: candidate.column + dc)
+        }
+        return nil
     }
 }
 
@@ -126,8 +119,8 @@ public enum ComparisonLayout {
 
 /// The viewer's minimap of a comparison: square cells, row-major from the top-left, inside an inset.
 public enum ComparisonMapLayout {
-    public static let maxSize = CGSize(width: 160, height: 120)
-    public static let maxCellSide: CGFloat = 12
+    public static let maxSize = CGSize(width: 240, height: 180)
+    public static let maxCellSide: CGFloat = 18
     public static let minCellSide: CGFloat = 3
     public static let gap: CGFloat = 2
     public static let inset: CGFloat = 5
