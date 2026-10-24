@@ -107,9 +107,16 @@ final class ComparisonTests: XCTestCase {
         XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 36, rows: 40, capacity: 9), window(32..<40, above: 32, below: 0))
     }
 
-    func testTinyCapacityStillShowsTheCurrentRow() {
-        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 5, rows: 40, capacity: 1), window(5..<6, above: 5, below: 34))
-        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 5, rows: 40, capacity: 0), window(5..<6, above: 5, below: 34))
+    func testAMarkerNeverStandsInForASingleRow() {
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 4, rows: 40, capacity: 9), window(0..<8, above: 0, below: 32))
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 35, rows: 40, capacity: 9), window(32..<40, above: 32, below: 0))
+    }
+
+    func testTinyCapacityShowsOnlyTheCurrentRowWithoutMarkers() {
+        let expected = ComparisonHeaderLayout.Window(rows: 5..<6, above: 5, below: 34, showsMarkers: false)
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 5, rows: 40, capacity: 1), expected)
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 5, rows: 40, capacity: 0), expected)
+        XCTAssertTrue(ComparisonHeaderLayout.visibleRows(current: 20, rows: 40, capacity: 9).showsMarkers)
     }
 
     func testMapNeverOutgrowsItsBound() {

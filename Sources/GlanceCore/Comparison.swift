@@ -183,26 +183,37 @@ public enum ComparisonMapLayout {
 public enum ComparisonHeaderLayout {
     public struct Window: Equatable {
         public let rows: Range<Int>
-        /// Rows hidden before and after `rows`, each named by an "N more" marker in its own slot.
+        /// Rows hidden before and after `rows`.
         public let above: Int
         public let below: Int
+        /// Whether each clipped end spends a slot on an "N more" marker; false when there is no room for them.
+        public let showsMarkers: Bool
 
-        public init(rows: Range<Int>, above: Int, below: Int) {
+        public init(rows: Range<Int>, above: Int, below: Int, showsMarkers: Bool = true) {
             self.rows = rows
             self.above = above
             self.below = below
+            self.showsMarkers = showsMarkers
         }
+
+        public var markerAbove: Bool { showsMarkers && above > 0 }
+        public var markerBelow: Bool { showsMarkers && below > 0 }
+        /// Slots in use, top to bottom: the optional marker above, `rows`, the optional marker below.
+        public var slots: Int { rows.count + (markerAbove ? 1 : 0) + (markerBelow ? 1 : 0) }
     }
 
-    /// `capacity` slots; a clipped end spends one on its marker. With under three slots only the current row shows.
+    /// `capacity` slots; a clipped end spends one on its marker, and never to hide a single row it
+    /// could show instead. With under three slots only the current row shows, without markers.
     public static func visibleRows(current: Int, rows: Int, capacity: Int) -> Window {
         func window(_ range: Range<Int>) -> Window { Window(rows: range, above: range.lowerBound, below: rows - range.upperBound) }
         if rows <= capacity { return window(0..<rows) }
-        if capacity < 3 { return window(current..<(current + 1)) }
+        if capacity < 3 {
+            return Window(rows: current..<(current + 1), above: current, below: rows - current - 1, showsMarkers: false)
+        }
         let labels = capacity - 2
         let start = current - labels / 2
-        if start <= 0 { return window(0..<(capacity - 1)) }
-        if start + labels >= rows { return window((rows - capacity + 1)..<rows) }
+        if start <= 1 { return window(0..<(capacity - 1)) }
+        if start + labels >= rows - 1 { return window((rows - capacity + 1)..<rows) }
         return window(start..<(start + labels))
     }
 }
