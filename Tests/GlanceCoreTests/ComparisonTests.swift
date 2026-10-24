@@ -87,6 +87,16 @@ final class ComparisonTests: XCTestCase {
         XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 15).height, 120.001)
     }
 
+    func testMapNeverOutgrowsItsBound() {
+        let bound = CGSize(width: 400, height: 150)
+        XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 40, bound: bound).height, 150)
+        XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 200, bound: CGSize(width: 400, height: 800)).height, 800)
+        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 5, rows: 400, bound: bound), 1, "never below a point")
+        XCTAssertEqual(ComparisonMapLayout.size(columns: 3, rows: 2, bound: bound), CGSize(width: 50, height: 36), "a roomy bound changes nothing")
+        let rect = ComparisonMapLayout.rect(of: cell(39, 4), columns: 5, rows: 40, bound: bound)
+        XCTAssertEqual(ComparisonMapLayout.cell(at: CGPoint(x: rect.midX, y: rect.midY), columns: 5, rows: 40, bound: bound), cell(39, 4))
+    }
+
     func testMapCellRectAndHitTestRoundTrip() {
         XCTAssertEqual(ComparisonMapLayout.rect(of: cell(1, 2), columns: 3, rows: 2), CGRect(x: 33, y: 19, width: 12, height: 12))
         for r in 0..<2 {

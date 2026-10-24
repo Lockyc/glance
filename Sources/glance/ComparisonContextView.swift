@@ -64,8 +64,13 @@ final class ComparisonContextView: NSView {
                       width: width, height: Self.cellHeight)
     }
 
+    /// The photo area the map may cover: above the strip, inside the margins.
+    private var mapBound: CGSize {
+        CGSize(width: bounds.width - 2 * Self.mapMargin, height: bounds.height - Self.stripHeight - 2 * Self.mapMargin)
+    }
+
     var mapFrame: CGRect {
-        let size = ComparisonMapLayout.size(columns: comparison.columns, rows: comparison.rows)
+        let size = ComparisonMapLayout.size(columns: comparison.columns, rows: comparison.rows, bound: mapBound)
         return CGRect(origin: CGPoint(x: bounds.width - Self.mapMargin - size.width, y: Self.mapMargin), size: size)
     }
 
@@ -74,6 +79,7 @@ final class ComparisonContextView: NSView {
     override func layout() {
         super.layout()
         band.frame = bandFrame
+        map.bound = mapBound
         map.frame = mapFrame
         for column in stripCells.indices {
             let frame = stripFrame(column: column)
@@ -110,7 +116,7 @@ final class ComparisonContextView: NSView {
         let target: Comparison.Cell?
         if mapFrame.contains(point) {
             target = ComparisonMapLayout.cell(at: CGPoint(x: point.x - mapFrame.minX, y: point.y - mapFrame.minY),
-                                              columns: comparison.columns, rows: comparison.rows)
+                                              columns: comparison.columns, rows: comparison.rows, bound: mapBound)
         } else if let current, let column = stripCells.indices.first(where: { stripFrame(column: $0).contains(point) }) {
             target = Comparison.Cell(row: current.row, column: column)
         } else {
@@ -125,6 +131,7 @@ final class ComparisonContextView: NSView {
 private final class MapView: NSView {
     private let comparison: Comparison
     var current: Comparison.Cell? { didSet { needsDisplay = true } }
+    var bound = ComparisonMapLayout.unbounded { didSet { needsDisplay = true } }
 
     init(comparison: Comparison) {
         self.comparison = comparison
@@ -141,7 +148,7 @@ private final class MapView: NSView {
         for row in 0..<comparison.rows {
             for column in 0..<comparison.columns {
                 let cell = Comparison.Cell(row: row, column: column)
-                let rect = ComparisonMapLayout.rect(of: cell, columns: comparison.columns, rows: comparison.rows)
+                let rect = ComparisonMapLayout.rect(of: cell, columns: comparison.columns, rows: comparison.rows, bound: bound)
                 guard comparison.file(at: cell) != nil else {
                     NSColor(white: 1, alpha: 0.25).setStroke()
                     NSBezierPath(rect: rect.insetBy(dx: 0.5, dy: 0.5)).stroke()

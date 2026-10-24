@@ -254,6 +254,14 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertEqual(item.state, .off)
     }
 
+    func testALongComparisonsMapStaysAboveTheStrip() {
+        let long = Comparison(variants: [Variant(label: "a", files: (0..<100).map { URL(fileURLWithPath: "/x/a\($0).png") })])
+        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
+        let context = ComparisonContextView(comparison: long, thumbnails: ThumbnailService(decoder: decoder, cacheDirectory: cache))
+        context.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
+        XCTAssertLessThanOrEqual(context.mapFrame.maxY, 400 - ComparisonContextView.stripHeight - ComparisonContextView.mapMargin)
+    }
+
     func testStripCellsShareTheWidth() {
         let wide = Comparison(variants: (0..<12).map { Variant(label: "v\($0)", files: [URL(fileURLWithPath: "/x/v\($0).png")]) })
         let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
