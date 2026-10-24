@@ -149,6 +149,15 @@ final class SnapshotTests: XCTestCase {
         try snapshot(window, "comparison-loading.png")
     }
 
+    /// Every cell's file unreadable, so each shows the can't-open glyph.
+    func testComparisonGridFailed() throws {
+        let window = try window(try comparison([("a", [.wide, .tall]), ("b", [.wide])]),
+                                size: NSSize(width: 1400, height: 900), decoder: FailingDecoder())
+        let (_, grid) = try comparisonGrid(window)
+        spin(until: "the failed tiles") { grid.cellViews.allSatisfy { !$0.isLoading } }
+        try snapshot(window, "comparison-failed.png")
+    }
+
     func testComparisonGridOverflow() throws {
         let shapes: [Shape] = [.wide, .tall, .square, .wide, .tall, .square]
         let window = try window(try comparison(["a", "b", "c", "d"].map { ($0, shapes) }), size: NSSize(width: 900, height: 600))
@@ -207,6 +216,11 @@ final class SnapshotTests: XCTestCase {
         spin(until: "the thumbnail hover preview", timeout: HoverPreview.delay + 5) { previewShown(window) }
         try snapshot(window, "thumbnail-hover.png")
     }
+}
+
+/// Fails every file at once, so each cell shows the can't-open glyph.
+private final class FailingDecoder: ImageDecoding {
+    func decode(_ url: URL, maxPixelSize: Int) -> Result<DecodedImage, DecodeError> { .failure(.unreadable) }
 }
 
 /// Never delivers within a snapshot's lifetime, so the cells stay loading.
