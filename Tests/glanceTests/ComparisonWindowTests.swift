@@ -118,6 +118,23 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertTrue(window.title.hasPrefix("a · "), window.title)
     }
 
+    func testLeavingTheGridOpensTheSelectedCellNotTheLastOne() throws {
+        let grid = try XCTUnwrap(window.firstResponder as? ComparisonGridView)
+        press(down)
+        press(right)
+        press(right)
+        XCTAssertEqual(grid.selection, cell(1, 2))
+        press(key("g", 5))
+        XCTAssertTrue(window.firstResponder is ViewerView)
+        XCTAssertEqual(model.current, url("c2"), "G opens the highlighted cell")
+        press(key("g", 5))
+        press(left)
+        XCTAssertEqual(grid.selection, cell(1, 1))
+        press(esc)
+        XCTAssertTrue(window.firstResponder is ViewerView, "an empty cell still leaves the grid")
+        XCTAssertEqual(model.current, url("c2"), "on an empty cell the viewer keeps what it showed")
+    }
+
     func testGSpaceEscReturnBetweenGridAndViewer() {
         press(enter)
         XCTAssertTrue(window.firstResponder is ViewerView)
