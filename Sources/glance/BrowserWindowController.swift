@@ -109,6 +109,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         model.onChange = { [weak self] in self?.modelChanged($0) }
         watch()
         NotificationCenter.default.addObserver(self, selector: #selector(rootsChanged), name: SubfolderRoots.didChange, object: roots)
+        NotificationCenter.default.addObserver(self, selector: #selector(contextSettingChanged), name: Self.contextChanged, object: nil)
 
         // A fixed list is complete from the start, so an empty one reads as empty, not loading.
         if model.scope == .fixed { scanned = true }
@@ -136,7 +137,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         showingGrid = false
         grid.view.isHidden = true
         viewer.isHidden = false
-        context?.isHidden = false
+        context?.isHidden = !Self.showsContext
         window?.makeFirstResponder(viewer)
     }
 
@@ -151,10 +152,27 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     @objc func toggleGrid(_ sender: Any?) { showingGrid ? showViewer() : showGrid() }
 
-    /// The viewer leaves the bottom strip to a comparison's context.
+    static let contextKey = "comparisonContext"
+    private static let contextChanged = Notification.Name("glance.comparisonContextChanged")
+
+    /// View → Show Comparison Context; on unless turned off. One setting for every comparison window.
+    static var showsContext: Bool { UserDefaults.standard.object(forKey: contextKey) as? Bool ?? true }
+
+    @objc func toggleComparisonContext(_ sender: Any?) {
+        UserDefaults.standard.set(!Self.showsContext, forKey: Self.contextKey)
+        NotificationCenter.default.post(name: Self.contextChanged, object: nil)
+    }
+
+    @objc private func contextSettingChanged() {
+        guard context != nil else { return }
+        context?.isHidden = showingGrid || !Self.showsContext
+        layoutViewer()
+    }
+
+    /// The viewer leaves the bottom strip to a comparison's context while it is shown.
     private func layoutViewer() {
         guard let container = window?.contentView else { return }
-        let inset = context == nil ? 0 : ComparisonContextView.stripHeight
+        let inset = context != nil && Self.showsContext ? ComparisonContextView.stripHeight : 0
         viewer.frame = NSRect(x: 0, y: inset, width: container.bounds.width, height: container.bounds.height - inset)
     }
 
@@ -359,6 +377,9 @@ extension BrowserWindowController: NSMenuItemValidation {
             return false
         }
         switch item.action {
+        case #selector(toggleComparisonContext(_:)):
+            guard comparison != nil else { return false }
+            item.state = Self.showsContext ? .on : .off
         case #selector(toggleSubfolders(_:)):
             item.state = isRoot ? .on : .off
         case #selector(toggleExcludedSubfolder(_:)):

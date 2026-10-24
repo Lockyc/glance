@@ -21,6 +21,8 @@ enum MainMenu {
 
         let view = submenu(in: main, title: "View")
         view.addItem(withTitle: "Toggle Grid", action: #selector(BrowserWindowController.toggleGrid(_:)), keyEquivalent: "g")
+        view.addItem(withTitle: "Show Comparison Context", action: #selector(BrowserWindowController.toggleComparisonContext(_:)),
+                     keyEquivalent: "")
         view.addItem(.separator())
         view.addItem(withTitle: "Include Subfolders", action: #selector(BrowserWindowController.toggleSubfolders(_:)), keyEquivalent: "")
         let subfolders = view.addItem(withTitle: "Subfolders", action: nil, keyEquivalent: "")

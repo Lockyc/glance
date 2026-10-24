@@ -49,6 +49,16 @@ final class ImageSetTests: XCTestCase {
         XCTAssertFalse(controller.validateMenuItem(item))
     }
 
+    func testMenuItemDisabledOutsideComparisons() {
+        let model = FolderModel(folder: dir, files: [url("a.png")], current: nil, scope: .fixed)
+        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
+        let controller = BrowserWindowController(model: model, thumbnails: ThumbnailService(cacheDirectory: cache), startInGrid: false)
+        defer { controller.close() }
+        XCTAssertNil(controller.context)
+        let item = NSMenuItem(title: "", action: #selector(BrowserWindowController.toggleComparisonContext(_:)), keyEquivalent: "")
+        XCTAssertFalse(controller.validateMenuItem(item))
+    }
+
     func testAnEmptySetReadsAsEmptyNotLoading() {
         let model = FolderModel(folder: dir, files: [], current: nil, scope: .fixed)
         let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
