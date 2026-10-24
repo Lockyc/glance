@@ -22,7 +22,7 @@ glance is free and open source.
 
 ![glance comparing five image models' renders of Big Buck Bunny, one model per column, one pose per row](docs/screenshots/comparison.png)
 
-<sub>Big Buck Bunny © Blender Foundation, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).</sub>
+<sub>Model renders adapted from Big Buck Bunny © Blender Foundation, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).</sub>
 
 ## Install
 
