@@ -2,16 +2,16 @@ import AppKit
 import GlanceCore
 
 /// A square image area with the filename under it. The filename shows from the start, so a
-/// tile looks the same shape while loading (with a spinner), loaded, or failed.
+/// tile looks the same shape while loading (TV static), loaded, or failed.
 final class ThumbnailItem: NSCollectionViewItem {
     static let identifier = NSUserInterfaceItemIdentifier("ThumbnailItem")
     static let captionHeight: CGFloat = 20
 
     private let imageLayer = CALayer()
     private let caption = NSTextField(labelWithString: "")
-    private let spinner = NSProgressIndicator.thumbnailSpinner()
+    private let staticLayer = StaticLayer()
     private(set) var isLoading = false {
-        didSet { isLoading ? spinner.startAnimation(nil) : spinner.stopAnimation(nil) }
+        didSet { staticLayer.isAnimating = isLoading }
     }
     private var request: Operation?
     private var url: URL?
@@ -25,13 +25,13 @@ final class ThumbnailItem: NSCollectionViewItem {
         imageLayer.backgroundColor = NSColor(white: 1, alpha: 0.06).cgColor
         imageLayer.borderColor = NSColor.controlAccentColor.cgColor
         imageLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        imageLayer.addSublayer(staticLayer)
         root.layer?.addSublayer(imageLayer)
         caption.font = .systemFont(ofSize: 11)
         caption.textColor = .secondaryLabelColor
         caption.alignment = .center
         caption.lineBreakMode = .byTruncatingMiddle
         root.addSubview(caption)
-        root.addSubview(spinner)
         view = root
     }
 
@@ -45,7 +45,7 @@ final class ThumbnailItem: NSCollectionViewItem {
         super.viewDidLayout()
         imageLayer.frame = imageRect
         caption.frame = NSRect(x: 0, y: 0, width: view.bounds.width, height: Self.captionHeight - 4)
-        spinner.center(in: imageRect)
+        staticLayer.frame = imageLayer.bounds
     }
 
     override var isSelected: Bool {
