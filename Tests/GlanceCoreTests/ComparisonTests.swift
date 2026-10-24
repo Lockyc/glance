@@ -87,6 +87,31 @@ final class ComparisonTests: XCTestCase {
         XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 15).height, 120.001)
     }
 
+    private func window(_ rows: Range<Int>, above: Int, below: Int) -> ComparisonHeaderLayout.Window {
+        .init(rows: rows, above: above, below: below)
+    }
+
+    func testAllRowsFit() {
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 2, rows: 6, capacity: 10), window(0..<6, above: 0, below: 0))
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 2, rows: 6, capacity: 6), window(0..<6, above: 0, below: 0))
+    }
+
+    func testWindowCentresOnTheCurrentRow() {
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 20, rows: 40, capacity: 9), window(17..<24, above: 17, below: 16))
+    }
+
+    func testWindowClampsAtTheEnds() {
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 0, rows: 40, capacity: 9), window(0..<8, above: 0, below: 32))
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 3, rows: 40, capacity: 9), window(0..<8, above: 0, below: 32))
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 39, rows: 40, capacity: 9), window(32..<40, above: 32, below: 0))
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 36, rows: 40, capacity: 9), window(32..<40, above: 32, below: 0))
+    }
+
+    func testTinyCapacityStillShowsTheCurrentRow() {
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 5, rows: 40, capacity: 1), window(5..<6, above: 5, below: 34))
+        XCTAssertEqual(ComparisonHeaderLayout.visibleRows(current: 5, rows: 40, capacity: 0), window(5..<6, above: 5, below: 34))
+    }
+
     func testMapNeverOutgrowsItsBound() {
         let bound = CGSize(width: 400, height: 150)
         XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 40, bound: bound).height, 150)
