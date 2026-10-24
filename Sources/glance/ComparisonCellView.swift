@@ -6,7 +6,7 @@ import GlanceCore
 /// keeps the same size.
 final class ComparisonCellView: NSView {
     private let imageLayer = CALayer()
-    private let spinner = NSProgressIndicator()
+    private let spinner = NSProgressIndicator.thumbnailSpinner()
     private(set) var isLoading = false {
         didSet { isLoading ? spinner.startAnimation(nil) : spinner.stopAnimation(nil) }
     }
@@ -24,10 +24,6 @@ final class ComparisonCellView: NSView {
         imageLayer.borderColor = NSColor.controlAccentColor.cgColor
         imageLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull(), "borderWidth": NSNull()]
         layer?.addSublayer(imageLayer)
-        spinner.style = .spinning
-        spinner.controlSize = .small
-        spinner.isDisplayedWhenStopped = false
-        spinner.sizeToFit()
         addSubview(spinner)
     }
 
@@ -39,7 +35,7 @@ final class ComparisonCellView: NSView {
     override func layout() {
         super.layout()
         imageLayer.frame = imageRect
-        spinner.setFrameOrigin(NSPoint(x: (bounds.width - spinner.frame.width) / 2, y: (bounds.height - spinner.frame.height) / 2))
+        spinner.center(in: imageRect)
     }
 
     var isSelected = false {

@@ -22,4 +22,26 @@ final class FolderLoadingTests: XCTestCase {
         XCTAssertEqual(model.current?.lastPathComponent, "b.jpg")
         controller.close()
     }
+
+    func testTilesSpinUntilTheirThumbnailLands() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("glance-load-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let files = ["a.png", "b.png", "c.png"].map { dir.appendingPathComponent($0) }
+        files.forEach { writeTestPNG(to: $0) }
+        let model = FolderModel(folder: dir, files: files, current: nil, scope: .fixed)
+        let thumbs = ThumbnailService(cacheDirectory: FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)"))
+        let grid = GridViewController(model: model, thumbnails: thumbs)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 600), styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = grid.view
+        grid.view.layoutSubtreeIfNeeded()
+        let collection = try XCTUnwrap(descendants(of: grid.view, GridCollectionView.self).first)
+        collection.layoutSubtreeIfNeeded()
+        let items = collection.visibleItems().compactMap { $0 as? ThumbnailItem }
+        XCTAssertEqual(items.count, 3)
+        XCTAssertTrue(items.allSatisfy(\.isLoading))
+
+        let deadline = Date().addingTimeInterval(5)
+        while items.contains(where: { $0.image == nil }), Date() < deadline { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) }
+        XCTAssertFalse(items.contains(where: \.isLoading))
+    }
 }
