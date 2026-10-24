@@ -1,5 +1,6 @@
 version := `cat VERSION`
 app := ".build/glance.app"
+info_plist := "Resources/Info.plist"
 
 # `default` pipes `just --list` through a small stock-perl filter that clips long recipe
 # docs to your terminal width (…) instead of wrapping. Self-contained — no external files;
@@ -32,26 +33,40 @@ snapshot dir:
 build:
     swift build -c release
 
-# Assemble .build/glance.app (version from VERSION, document types from --list-types; signed with APPLE_SIGNING_IDENTITY, else ad-hoc)
+# Assemble .build/glance.app (version from VERSION, document types from --list-types, Sparkle embedded; signed with APPLE_SIGNING_IDENTITY, else ad-hoc)
 [group("build")]
 bundle: build
     #!/usr/bin/env bash
     set -euo pipefail
     rm -rf "{{app}}"
-    mkdir -p "{{app}}/Contents/MacOS" "{{app}}/Contents/Resources"
+    mkdir -p "{{app}}/Contents/MacOS" "{{app}}/Contents/Resources" "{{app}}/Contents/Frameworks"
     cp .build/release/glance "{{app}}/Contents/MacOS/glance"
+    install_name_tool -add_rpath @executable_path/../Frameworks "{{app}}/Contents/MacOS/glance"
+    ditto .build/release/Sparkle.framework "{{app}}/Contents/Frameworks/Sparkle.framework"
     plist="{{app}}/Contents/Info.plist"
-    cp Resources/Info.plist "$plist"
+    cp "{{info_plist}}" "$plist"
     plutil -replace CFBundleShortVersionString -string "{{version}}" "$plist"
     plutil -replace CFBundleVersion -string "{{version}}" "$plist"
     for t in $(.build/release/glance --list-types); do
         plutil -insert CFBundleDocumentTypes.0.LSItemContentTypes -string "$t" -append "$plist"
     done
+    # Inside-out: each nested Sparkle helper before the framework, the framework before the app.
     if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
-        codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "{{app}}"
+        sign=(codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY")
     else
-        codesign --force --sign - "{{app}}"
+        sign=(codesign --force --sign -)
     fi
+    sparkle="{{app}}/Contents/Frameworks/Sparkle.framework"
+    "${sign[@]}" "$sparkle/Versions/B/XPCServices/Installer.xpc"
+    "${sign[@]}" --preserve-metadata=entitlements "$sparkle/Versions/B/XPCServices/Downloader.xpc"
+    "${sign[@]}" "$sparkle/Versions/B/Autoupdate" "$sparkle/Versions/B/Updater.app" "$sparkle"
+    "${sign[@]}" "{{app}}"
+
+# Print the directory holding Sparkle's sign_update and generate_keys (resolving packages first)
+[group("build")]
+sparkle-bin:
+    @swift package resolve >/dev/null
+    @echo "{{justfile_directory()}}/.build/artifacts/sparkle/Sparkle/bin"
 
 # Build and open glance on the given files/folders
 [group("app")]
