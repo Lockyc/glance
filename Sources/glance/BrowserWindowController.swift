@@ -26,8 +26,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let decodeCache: DecodeCache
     private let viewer: ViewerView
     private let grid: any BrowserGrid
-    /// Over viewer and grid once a scan finds no images; hidden before then, so an unscanned folder never claims to be empty.
-    private let emptyMessage = NSTextField(labelWithString: "No images in this folder")
+    /// Shown once a scan finds no images; hidden before then, so an unscanned folder never claims to be empty.
+    private let empty = EmptyFolderView()
     /// Set for a comparison window: the grid is the variant × shot grid and the viewer steps in 2D.
     private let comparison: Comparison?
     /// A comparison's strip and map over the viewer; nil for any other window.
@@ -50,8 +50,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private var scanned = false
     private var scanning = false
     private var pendingChange: TreeWatcher.Change?
-    /// The root's top-level folders, read by the scan so View → Subfolders never touches the disk.
-    private var rootFolders: [String] = []
+    /// The folder's top-level folders, read by the scan so View → Subfolders and the empty view never touch the disk.
+    private var topFolders: [String] = []
 
     init(model: FolderModel, thumbnails: ThumbnailService, startInGrid: Bool, roots: SubfolderRoots = .shared, landing: URL? = nil,
          comparison: Comparison? = nil) {
@@ -87,15 +87,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             container.addSubview(context, positioned: .above, relativeTo: viewer)
             self.context = context
         }
-        emptyMessage.textColor = .secondaryLabelColor
-        emptyMessage.font = .systemFont(ofSize: 15)
-        emptyMessage.isHidden = true
-        emptyMessage.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(emptyMessage)
-        NSLayoutConstraint.activate([
-            emptyMessage.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            emptyMessage.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-        ])
+        empty.frame = container.bounds
+        empty.autoresizingMask = [.width, .height]
+        empty.isHidden = true
+        container.addSubview(empty)
         window.contentView = container
         super.init(window: window)
         window.delegate = self
@@ -112,6 +107,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             self?.showViewer()
         }
         grid.onExit = { [weak self] in self?.showViewer() }
+        empty.onInclude = { [weak self] in self?.toggleSubfolders(nil) }
         decodeCache.onDecoded = { [weak self] url, result in
             guard let self, url == self.model.current else { return }
             self.viewer.show(result, for: url)
@@ -219,7 +215,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         if scanned, case .directories(let changed) = change, case .tree = scope { dirs = changed }
         // The top-level folder set changes only with the root itself, so a pass that re-reads
         // deeper folders keeps the names it has.
-        let readFolders = scope != .flat && (dirs?.contains { SubfolderRoots.relativePath(of: $0, in: folder) == "" } ?? true)
+        let readFolders = dirs?.contains { SubfolderRoots.relativePath(of: $0, in: folder) == "" } ?? true
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let listing: FolderModel.Listing?
             if let dirs, case .tree(let excluded) = scope {
@@ -235,7 +231,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
                 guard generation == self.scanGeneration else { return }
                 let first = !self.scanned
                 self.scanned = true
-                if let folders { self.rootFolders = folders }
+                if let folders { self.topFolders = folders }
                 if let listing { self.model.replaceFiles(listing.files, dates: listing.dates) }
                 if first, let landing = self.landing { self.land(at: landing) }
                 if first, self.model.files.isEmpty { self.modelChanged(.files) }
@@ -263,8 +259,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         roots.setExcluded(name, !excluded.contains(name), in: model.folder)
     }
 
-    /// The root's top-level folders, for View → Subfolders, as the last scan found them.
-    func subfolders() -> [String] { rootFolders }
+    /// The folder's top-level folders, for View → Subfolders, as the last scan found them.
+    func subfolders() -> [String] { topFolders }
 
     @objc private func rootsChanged() {
         guard model.scope != .fixed else { return }
@@ -279,7 +275,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     private func modelChanged(_ change: FolderModel.Change) {
         if change == .files { grid.reload() }
-        emptyMessage.isHidden = !(scanned && model.files.isEmpty)
+        empty.isHidden = !(scanned && model.files.isEmpty)
+        empty.update(subfolders: topFolders, includable: model.scope == .flat)
         guard let index = model.currentIndex, let url = model.current else {
             decodeCache.clear()
             viewer.clear()
