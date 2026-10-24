@@ -72,9 +72,7 @@ final class ComparisonContextView: NSView {
     /// The shown slots, top to bottom, vertically centred in the row header: an optional "more" marker,
     /// the windowed rows, another optional marker.
     private var slotTop: CGFloat {
-        let window = rowWindow
-        let slots = window.rows.count + (window.above > 0 ? 1 : 0) + (window.below > 0 ? 1 : 0)
-        return rowBand.minY + max(0, (rowBand.height - CGFloat(slots) * Self.rowHeight) / 2)
+        rowBand.minY + max(0, (rowBand.height - CGFloat(rowWindow.slots) * Self.rowHeight) / 2)
     }
 
     private func slotFrame(_ slot: Int) -> CGRect {
@@ -85,7 +83,7 @@ final class ComparisonContextView: NSView {
     func rowLabelFrame(_ row: Int) -> CGRect? {
         let window = rowWindow
         guard window.rows.contains(row) else { return nil }
-        return slotFrame(row - window.rows.lowerBound + (window.above > 0 ? 1 : 0))
+        return slotFrame(row - window.rows.lowerBound + (window.markerAbove ? 1 : 0))
     }
 
     /// The photo area the map may cover, inside its margins.
@@ -119,12 +117,12 @@ final class ComparisonContextView: NSView {
             rowLabels[row].isHidden = frame == nil
             if let frame { rowLabels[row].frame = textFrame(in: frame, inset: Self.labelInset) }
         }
-        aboveMarker.isHidden = window.above == 0
+        aboveMarker.isHidden = !window.markerAbove
         aboveMarker.stringValue = "⋮ \(window.above) more"
         aboveMarker.frame = textFrame(in: slotFrame(0), inset: Self.labelInset)
-        belowMarker.isHidden = window.below == 0
+        belowMarker.isHidden = !window.markerBelow
         belowMarker.stringValue = "⋮ \(window.below) more"
-        belowMarker.frame = textFrame(in: slotFrame(window.rows.count + (window.above > 0 ? 1 : 0)), inset: Self.labelInset)
+        belowMarker.frame = textFrame(in: slotFrame(window.slots - 1), inset: Self.labelInset)
         update()
     }
 

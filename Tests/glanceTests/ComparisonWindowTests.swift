@@ -141,7 +141,7 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertEqual(decoder.sizes.count, present.count, "one decode per cell, none at a provisional size")
     }
 
-    // MARK: Context (strip + map) in the viewer
+    // MARK: Context (headers + map) in the viewer
 
     private var viewer: ViewerView { controller.window!.contentView!.subviews.compactMap { $0 as? ViewerView }.first! }
 
@@ -206,6 +206,23 @@ final class ComparisonWindowTests: XCTestCase {
         press(down)
         try click(controller.context?.columnLabelFrame(1))
         XCTAssertEqual(model.current, url("a2"))
+    }
+
+    func testClickingARowLabelWhoseCellIsEmptyDoesNothing() throws {
+        press(enter)
+        press(right)
+        XCTAssertEqual(model.current, url("b1"))
+        try click(controller.context?.rowLabelFrame(1))
+        XCTAssertEqual(model.current, url("b1"))
+    }
+
+    func testAShortHeaderShowsTheCurrentRowInsideIt() throws {
+        let context = ComparisonContextView(comparison: Comparison(variants: [longVariant]))
+        context.frame = NSRect(x: 0, y: 0, width: 600, height: ComparisonContextView.columnHeaderHeight + 30)
+        context.current = cell(50, 0)
+        context.layoutSubtreeIfNeeded()
+        let header = CGRect(x: 0, y: ComparisonContextView.columnHeaderHeight, width: ComparisonContextView.rowHeaderWidth, height: 30)
+        XCTAssertTrue(header.contains(try XCTUnwrap(context.rowLabelFrame(50))))
     }
 
     func testClickingTheMapOpensThatCell() throws {
