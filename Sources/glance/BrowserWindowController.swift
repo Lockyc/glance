@@ -28,6 +28,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let grid: any BrowserGrid
     /// Set for a comparison window: the grid is the variant × shot grid and the viewer steps in 2D.
     private let comparison: Comparison?
+    /// A comparison's strip and map over the viewer; nil for any other window.
+    private(set) var context: ComparisonContextView?
     private(set) var showingGrid = false
     /// Full-detail re-decodes for zoom run one at a time; a newer request or a change of file cancels the last.
     private let upgrades: OperationQueue = {
@@ -75,10 +77,23 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             child.autoresizingMask = [.width, .height]
             container.addSubview(child)
         }
+        if let comparison {
+            let context = ComparisonContextView(comparison: comparison, thumbnails: thumbnails)
+            context.frame = container.bounds
+            context.autoresizingMask = [.width, .height]
+            context.isHidden = true // until showViewer, so a window that opens on the grid requests no strip thumbnails
+            container.addSubview(context, positioned: .above, relativeTo: viewer)
+            self.context = context
+        }
         window.contentView = container
         super.init(window: window)
         window.delegate = self
 
+        context?.onSelect = { [weak self] cell in
+            guard let self, let index = self.comparison?.cells.firstIndex(of: cell) else { return }
+            self.model.select(index)
+        }
+        layoutViewer()
         viewer.onCommand = { [weak self] in self?.handle($0) }
         viewer.onNeedsResolution = { [weak self] url, pixels in self?.decodeHigherResolution(url, pixels) }
         grid.onOpen = { [weak self] index in
@@ -121,18 +136,27 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         showingGrid = false
         grid.view.isHidden = true
         viewer.isHidden = false
+        context?.isHidden = false
         window?.makeFirstResponder(viewer)
     }
 
     func showGrid() {
         showingGrid = true
         viewer.isHidden = true
+        context?.isHidden = true
         grid.view.isHidden = false
         grid.reveal(model.currentIndex)
         window?.makeFirstResponder(grid.firstResponderView)
     }
 
     @objc func toggleGrid(_ sender: Any?) { showingGrid ? showViewer() : showGrid() }
+
+    /// The viewer leaves the bottom strip to a comparison's context.
+    private func layoutViewer() {
+        guard let container = window?.contentView else { return }
+        let inset = context == nil ? 0 : ComparisonContextView.stripHeight
+        viewer.frame = NSRect(x: 0, y: inset, width: container.bounds.width, height: container.bounds.height - inset)
+    }
 
     // MARK: Model
 
@@ -233,6 +257,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             return
         }
         decodeCache.focus(on: index, in: model.files)
+        context?.current = comparison?.cells[index]
         // Only a change of file re-shows; a list change around the same file keeps its zoom.
         if url != viewer.shownURL {
             upgrade?.cancel()
