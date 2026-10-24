@@ -2,13 +2,17 @@ import AppKit
 import GlanceCore
 
 /// A square image area with the filename under it. The filename shows from the start, so a
-/// tile looks the same shape while loading, loaded, or failed.
+/// tile looks the same shape while loading (with a spinner), loaded, or failed.
 final class ThumbnailItem: NSCollectionViewItem {
     static let identifier = NSUserInterfaceItemIdentifier("ThumbnailItem")
     static let captionHeight: CGFloat = 20
 
     private let imageLayer = CALayer()
     private let caption = NSTextField(labelWithString: "")
+    private let spinner = NSProgressIndicator.thumbnailSpinner()
+    private(set) var isLoading = false {
+        didSet { isLoading ? spinner.startAnimation(nil) : spinner.stopAnimation(nil) }
+    }
     private var request: Operation?
     private var url: URL?
     private(set) var image: CGImage?
@@ -27,6 +31,7 @@ final class ThumbnailItem: NSCollectionViewItem {
         caption.alignment = .center
         caption.lineBreakMode = .byTruncatingMiddle
         root.addSubview(caption)
+        root.addSubview(spinner)
         view = root
     }
 
@@ -40,6 +45,7 @@ final class ThumbnailItem: NSCollectionViewItem {
         super.viewDidLayout()
         imageLayer.frame = imageRect
         caption.frame = NSRect(x: 0, y: 0, width: view.bounds.width, height: Self.captionHeight - 4)
+        spinner.center(in: imageRect)
     }
 
     override var isSelected: Bool {
@@ -50,8 +56,10 @@ final class ThumbnailItem: NSCollectionViewItem {
         self.url = url
         caption.stringValue = url.lastPathComponent
         view.toolTip = url.lastPathComponent
+        isLoading = true
         request = service.request(url, pixelSize: pixelSize) { [weak self] result in
             guard let self, self.url == url else { return }
+            self.isLoading = false
             switch result {
             case .success(let image):
                 self.image = image
@@ -68,6 +76,7 @@ final class ThumbnailItem: NSCollectionViewItem {
         super.prepareForReuse()
         request?.cancel()
         request = nil
+        isLoading = false
         url = nil
         image = nil
         imageLayer.contents = nil

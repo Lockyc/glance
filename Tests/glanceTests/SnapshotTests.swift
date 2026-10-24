@@ -102,10 +102,6 @@ final class SnapshotTests: XCTestCase {
                                   context: nil, eventNumber: 0, clickCount: 0, pressure: 0)!
     }
 
-    private func descendants<T: NSView>(of view: NSView, _ type: T.Type) -> [T] {
-        view.subviews.flatMap { ($0 as? T).map { [$0] } ?? descendants(of: $0, type) }
-    }
-
     private func comparisonGrid(_ window: NSWindow) throws -> (ComparisonGridViewController, ComparisonGridView) {
         let grid = try XCTUnwrap(descendants(of: window.contentView!, ComparisonGridView.self).first)
         let root = try XCTUnwrap(window.contentView?.subviews.first { !($0 is ViewerView) })

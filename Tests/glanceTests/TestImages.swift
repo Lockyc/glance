@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
@@ -17,4 +18,9 @@ func writeTestPNG(to url: URL, width: Int = 8, height: Int = 8, color: CGColor? 
     let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
     CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
     CGImageDestinationFinalize(dest)
+}
+
+/// Every view of `type` under `view`, depth-first; a match's own subviews are not searched.
+func descendants<T: NSView>(of view: NSView, _ type: T.Type) -> [T] {
+    view.subviews.flatMap { ($0 as? T).map { [$0] } ?? descendants(of: $0, type) }
 }
