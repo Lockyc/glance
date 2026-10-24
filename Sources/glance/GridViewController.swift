@@ -125,7 +125,7 @@ final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewD
     /// ←/→: the next or previous tile in the flat order, across month boundaries; stops at the ends.
     private func step(_ delta: Int) {
         guard !listed.isEmpty else { return }
-        let current = collectionView.selectionIndexPaths.first.flatMap(sections.index(for:)) ?? model.currentIndex ?? 0
+        let current = collectionView.selectionIndexPaths.min().flatMap(sections.index(for:)) ?? model.currentIndex ?? 0
         let path = sections.indexPath(for: min(max(current + delta, 0), listed.count - 1))
         collectionView.selectionIndexPaths = [path]
         collectionView.scrollToItems(at: [path], scrollPosition: .nearestHorizontalEdge)
