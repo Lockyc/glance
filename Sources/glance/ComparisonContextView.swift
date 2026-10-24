@@ -69,14 +69,10 @@ final class ComparisonContextView: NSView {
                                            capacity: Int(rowBand.height / Self.rowHeight))
     }
 
-    /// The shown slots, top to bottom, vertically centred in the row header: an optional "more" marker,
+    /// The shown slots, top to bottom from just under the column header: an optional "more" marker,
     /// the windowed rows, another optional marker.
-    private var slotTop: CGFloat {
-        rowBand.minY + max(0, (rowBand.height - CGFloat(rowWindow.slots) * Self.rowHeight) / 2)
-    }
-
     private func slotFrame(_ slot: Int) -> CGRect {
-        CGRect(x: 0, y: slotTop + CGFloat(slot) * Self.rowHeight, width: Self.rowHeaderWidth, height: Self.rowHeight)
+        CGRect(x: 0, y: rowBand.minY + CGFloat(slot) * Self.rowHeight, width: Self.rowHeaderWidth, height: Self.rowHeight)
     }
 
     /// nil while the row is windowed out.
