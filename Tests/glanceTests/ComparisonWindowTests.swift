@@ -3,6 +3,17 @@ import AppKit
 import GlanceCore
 import XCTest
 
+/// The pixel size of every thumbnail decode.
+final class RecordingDecoder: ImageDecoding {
+    private let lock = NSLock()
+    private var _sizes: [Int] = []
+    var sizes: [Int] { lock.withLock { _sizes } }
+    func decode(_ url: URL, maxPixelSize: Int) -> Result<DecodedImage, DecodeError> {
+        lock.withLock { _sizes.append(maxPixelSize) }
+        return ImageDecoder().decode(url, maxPixelSize: maxPixelSize)
+    }
+}
+
 /// The comparison window: a variant × shot grid and a viewer that steps along rows and columns.
 /// Fixture `a: [a1, a2]`, `b: [b1]`, `c: [c1, c2]` — the cell at (1,1) is empty.
 final class ComparisonWindowTests: XCTestCase {
@@ -10,6 +21,7 @@ final class ComparisonWindowTests: XCTestCase {
     private var model: FolderModel!
     private var controller: BrowserWindowController!
     private var window: NSWindow!
+    private var decoder: RecordingDecoder!
 
     override func setUpWithError() throws {
         _ = NSApplication.shared
@@ -23,9 +35,11 @@ final class ComparisonWindowTests: XCTestCase {
         ])
         model = FolderModel(folder: dir, files: comparison.files.map(FolderModel.canonical), current: nil, scope: .fixed)
         let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
-        controller = BrowserWindowController(model: model, thumbnails: ThumbnailService(cacheDirectory: cache), startInGrid: true,
-                                             comparison: comparison)
+        decoder = RecordingDecoder()
+        controller = BrowserWindowController(model: model, thumbnails: ThumbnailService(decoder: decoder, cacheDirectory: cache),
+                                             startInGrid: true, comparison: comparison)
         window = try XCTUnwrap(controller.window)
+        window.layoutIfNeeded()
     }
 
     override func tearDown() { controller.close() }
@@ -110,6 +124,17 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertTrue(window.firstResponder is ComparisonGridView)
         press(key(" ", 49))
         XCTAssertTrue(window.firstResponder is ViewerView)
+    }
+
+    func testCellsSpinUntilTheirThumbnailLandsAndDecodeOnceAtTheLaidOutSize() throws {
+        let grid = try XCTUnwrap(window.firstResponder as? ComparisonGridView)
+        let present = grid.cellViews.filter { $0.url != nil }
+        XCTAssertTrue(present.allSatisfy(\.isLoading))
+        XCTAssertFalse(grid.cellViews[1 * 3 + 1].isLoading)
+        let deadline = Date().addingTimeInterval(5)
+        while present.contains(where: { $0.image == nil }), Date() < deadline { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) }
+        XCTAssertFalse(present.contains(where: \.isLoading))
+        XCTAssertEqual(decoder.sizes.count, present.count, "one decode per cell, none at a provisional size")
     }
 
     func testEmptyCellIsAPlaceholderInPlace() throws {

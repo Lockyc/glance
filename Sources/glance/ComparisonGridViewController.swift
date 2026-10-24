@@ -22,6 +22,8 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
     private let preview = HoverPreviewView()
     private lazy var previewer = HoverPreviewer(preview: preview, thumbnails: thumbnails)
     private var cellSize: CGSize
+    /// Thumbnails wait for the first layout: a request at the provisional size would be decoded and thrown away.
+    private var laidOut = false
 
     init(comparison: Comparison, thumbnails: ThumbnailService) {
         self.comparison = comparison
@@ -106,6 +108,7 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
                                              available: CGSize(width: available.width - chrome, height: available.height - Self.inset * 2),
                                              minimumSide: minimumSide, spacing: Self.spacing)
         grid.layOut(cellSize: cellSize)
+        laidOut = true
         configureCells()
         positionHeader()
     }
@@ -123,6 +126,7 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
     }
 
     private func configureCells() {
+        guard laidOut else { return }
         let pixels = thumbnailPixels
         for (i, cell) in grid.cellViews.enumerated() {
             cell.configure(url: comparison.file(at: grid.cell(at: i)), pixelSize: pixels, service: thumbnails)
