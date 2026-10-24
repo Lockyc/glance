@@ -75,6 +75,34 @@ final class ComparisonTests: XCTestCase {
         XCTAssertEqual(ComparisonLayout.minimumSideRange, HoverPreview.tileSideRange)
     }
 
+    func testMapSmallGridUsesMaxCellSide() {
+        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 3, rows: 2), 12)
+        XCTAssertEqual(ComparisonMapLayout.size(columns: 3, rows: 2), CGSize(width: 50, height: 36))
+    }
+
+    func testManyRowsClampToMinimumSide() {
+        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 5, rows: 40), 3)
+        XCTAssertEqual(ComparisonMapLayout.size(columns: 5, rows: 40).height, 208)
+        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 5, rows: 15), (120 - 10 - 28) / 15, accuracy: 0.001)
+        XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 15).height, 120.001)
+    }
+
+    func testMapCellRectAndHitTestRoundTrip() {
+        XCTAssertEqual(ComparisonMapLayout.rect(of: cell(1, 2), columns: 3, rows: 2), CGRect(x: 33, y: 19, width: 12, height: 12))
+        for r in 0..<2 {
+            for c in 0..<3 {
+                let rect = ComparisonMapLayout.rect(of: cell(r, c), columns: 3, rows: 2)
+                XCTAssertEqual(ComparisonMapLayout.cell(at: CGPoint(x: rect.midX, y: rect.midY), columns: 3, rows: 2), cell(r, c))
+            }
+        }
+    }
+
+    func testMapHitTestMissesGapsAndOutside() {
+        XCTAssertNil(ComparisonMapLayout.cell(at: CGPoint(x: 18, y: 8), columns: 3, rows: 2))
+        XCTAssertNil(ComparisonMapLayout.cell(at: CGPoint(x: 2, y: 2), columns: 3, rows: 2))
+        XCTAssertNil(ComparisonMapLayout.cell(at: CGPoint(x: 500, y: 8), columns: 3, rows: 2))
+    }
+
     func testComparisonTitle() {
         XCTAssertEqual(ViewerTitle.comparison(variant: "a", row: "chips-open", fileName: "chips-a-open.png",
                                               pixelSize: CGSize(width: 800, height: 600)),

@@ -123,3 +123,48 @@ public enum ComparisonLayout {
         return CGSize(width: side(columns, available.width), height: side(rows, available.height))
     }
 }
+
+/// The viewer's minimap of a comparison: square cells, row-major from the top-left, inside an inset.
+public enum ComparisonMapLayout {
+    public static let maxSize = CGSize(width: 160, height: 120)
+    public static let maxCellSide: CGFloat = 12
+    public static let minCellSide: CGFloat = 3
+    public static let gap: CGFloat = 2
+    public static let inset: CGFloat = 5
+
+    /// Shrinks to fit `maxSize` but never below `minCellSide`: a long comparison grows the map instead.
+    public static func cellSide(columns: Int, rows: Int) -> CGFloat {
+        func fit(_ count: Int, _ space: CGFloat) -> CGFloat {
+            let n = CGFloat(max(count, 1))
+            return (space - 2 * inset - gap * (n - 1)) / n
+        }
+        let side = min(fit(columns, maxSize.width), fit(rows, maxSize.height))
+        return min(maxCellSide, max(minCellSide, side))
+    }
+
+    public static func size(columns: Int, rows: Int) -> CGSize {
+        let side = cellSide(columns: columns, rows: rows)
+        func extent(_ count: Int) -> CGFloat {
+            let n = CGFloat(max(count, 1))
+            return 2 * inset + n * side + (n - 1) * gap
+        }
+        return CGSize(width: extent(columns), height: extent(rows))
+    }
+
+    /// Top-left origin, for a flipped view.
+    public static func rect(of cell: Comparison.Cell, columns: Int, rows: Int) -> CGRect {
+        let side = cellSide(columns: columns, rows: rows)
+        return CGRect(x: inset + CGFloat(cell.column) * (side + gap), y: inset + CGFloat(cell.row) * (side + gap),
+                      width: side, height: side)
+    }
+
+    /// nil outside the grid or in a gap.
+    public static func cell(at point: CGPoint, columns: Int, rows: Int) -> Comparison.Cell? {
+        let pitch = cellSide(columns: columns, rows: rows) + gap
+        let x = point.x - inset, y = point.y - inset
+        guard x >= 0, y >= 0 else { return nil }
+        let cell = Comparison.Cell(row: Int(y / pitch), column: Int(x / pitch))
+        guard cell.row < rows, cell.column < columns, rect(of: cell, columns: columns, rows: rows).contains(point) else { return nil }
+        return cell
+    }
+}
