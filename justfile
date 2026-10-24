@@ -33,6 +33,11 @@ snapshot dir:
 build:
     swift build -c release
 
+# Render Resources/AppIcon.icns and the README's icon.png from the Resources/icon.svg master
+[group("build")]
+icons:
+    plate icon --icns Resources/AppIcon.icns --png 256:Resources/icon.png Resources/icon.svg
+
 # Assemble .build/glance.app (version from VERSION, document types from --list-types, Sparkle embedded; signed with APPLE_SIGNING_IDENTITY, else ad-hoc)
 [group("build")]
 bundle: build
@@ -43,6 +48,7 @@ bundle: build
     cp .build/release/glance "{{app}}/Contents/MacOS/glance"
     install_name_tool -add_rpath @executable_path/../Frameworks "{{app}}/Contents/MacOS/glance"
     ditto .build/release/Sparkle.framework "{{app}}/Contents/Frameworks/Sparkle.framework"
+    cp Resources/AppIcon.icns "{{app}}/Contents/Resources/AppIcon.icns"
     plist="{{app}}/Contents/Info.plist"
     cp "{{info_plist}}" "$plist"
     plutil -replace CFBundleShortVersionString -string "{{version}}" "$plist"

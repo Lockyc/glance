@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="glance app icon">
+  <title>glance</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7457e0"/>
+      <stop offset="1" stop-color="#3d2a9c"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="1" stop-color="#ff9466"/>
+    </linearGradient>
+    <clipPath id="photo"><rect x="226" y="366" width="572" height="388" rx="26"/></clipPath>
+  </defs>
+
+  <!-- macOS squircle tile -->
+  <rect x="0" y="0" width="1024" height="1024" rx="229" fill="url(#tile)"/>
+
+  <!-- the folder behind: the next images, one arrow-key away -->
+  <rect x="290" y="226" width="572" height="420" rx="44" fill="#ffffff" opacity="0.28"/>
+  <rect x="244" y="282" width="572" height="420" rx="44" fill="#ffffff" opacity="0.5"/>
+
+  <!-- the image in view -->
+  <rect x="194" y="334" width="636" height="452" rx="48" fill="#ffffff"/>
+  <g clip-path="url(#photo)">
+    <rect x="226" y="366" width="572" height="388" fill="url(#sky)"/>
+    <circle cx="664" cy="470" r="50" fill="#fff6dc"/>
+    <path d="M 196 754 L 392 538 L 486 640 L 586 516 L 830 754 Z" fill="#3d2a9c"/>
+    <path d="M 392 538 L 486 640 L 586 516 L 830 754 L 600 754 Z" fill="#5a43c4"/>
+  </g>
+</svg>

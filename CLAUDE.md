@@ -28,6 +28,7 @@ install.sh               # curl-pipeable installer: latest release's glance.zip,
 .claude/commands/glance/install.md  # the guided /glance:install over install.sh
 Sources/GlanceCore/      # all logic — unit-tested
 Sources/glance/          # the AppKit shell (executable)
+Resources/icon.svg       # the app icon master; `just icons` renders AppIcon.icns and icon.png from it
 Resources/Info.plist     # bundle template; `just bundle` fills its version (from VERSION)
                          # and document types (from `glance --list-types`) — never hand-edit them
 Tests/GlanceCoreTests/   # unit tests for GlanceCore
