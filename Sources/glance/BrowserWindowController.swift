@@ -26,6 +26,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let decodeCache: DecodeCache
     private let viewer: ViewerView
     private let grid: any BrowserGrid
+    /// Over viewer and grid once a scan finds no images; hidden before then, so an unscanned folder never claims to be empty.
+    private let emptyMessage = NSTextField(labelWithString: "No images in this folder")
     /// Set for a comparison window: the grid is the variant × shot grid and the viewer steps in 2D.
     private let comparison: Comparison?
     /// A comparison's strip and map over the viewer; nil for any other window.
@@ -85,6 +87,15 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             container.addSubview(context, positioned: .above, relativeTo: viewer)
             self.context = context
         }
+        emptyMessage.textColor = .secondaryLabelColor
+        emptyMessage.font = .systemFont(ofSize: 15)
+        emptyMessage.isHidden = true
+        emptyMessage.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(emptyMessage)
+        NSLayoutConstraint.activate([
+            emptyMessage.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            emptyMessage.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+        ])
         window.contentView = container
         super.init(window: window)
         window.delegate = self
@@ -268,9 +279,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     private func modelChanged(_ change: FolderModel.Change) {
         if change == .files { grid.reload() }
+        emptyMessage.isHidden = !(scanned && model.files.isEmpty)
         guard let index = model.currentIndex, let url = model.current else {
             decodeCache.clear()
-            scanned ? viewer.showEmpty() : viewer.showLoading()
+            viewer.clear()
             updateTitle()
             return
         }

@@ -3,8 +3,8 @@ import GlanceCore
 
 enum ViewerCommand { case next, previous, up, down, first, last, toggleGrid, toggleFullScreen, exitFullScreen, editInExcerpt }
 
-/// One image on a CALayer: fit / zoom / pan, animation, and in-place messages for failures and
-/// empty folders. Holds no navigation state — commands go up through `onCommand`.
+/// One image on a CALayer: fit / zoom / pan, animation, and an in-place message for a file that
+/// fails to open. Holds no navigation state — commands go up through `onCommand`.
 final class ViewerView: NSView, ZoomActions {
     var onCommand: ((ViewerCommand) -> Void)?
     /// Asked when the zoom shows more detail than the current bitmap holds (url, long-side px).
@@ -68,10 +68,8 @@ final class ViewerView: NSView, ZoomActions {
         shownURL = url
     }
 
-    func showEmpty() { showMessage("No images in this folder") }
-
-    /// Blank until the folder listing arrives, so an unscanned folder never claims to be empty.
-    func showLoading() { showMessage("") }
+    /// Nothing to show: the window carries the empty folder's message over viewer and grid alike.
+    func clear() { showMessage("") }
 
     func upgrade(_ decoded: DecodedImage) {
         guard decoded.url == image?.url, max(decoded.cgImage.width, decoded.cgImage.height) > shownPixels else { return }

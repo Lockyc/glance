@@ -23,6 +23,29 @@ final class FolderLoadingTests: XCTestCase {
         controller.close()
     }
 
+    /// A folder opens on the grid; with images only in its subfolders, the grid says so once scanned.
+    func testGridOfAFolderWithNoImagesReadsAsEmpty() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("glance-load-\(UUID().uuidString)")
+        let sub = dir.appendingPathComponent("sub")
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        writeTestPNG(to: sub.appendingPathComponent("a.png"))
+        let model = FolderModel(folder: dir, files: [], current: nil)
+        let thumbs = ThumbnailService(cacheDirectory: FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)"))
+        let controller = BrowserWindowController(model: model, thumbnails: thumbs, startInGrid: true, roots: SubfolderRoots(defaults: UserDefaults(suiteName: UUID().uuidString)!))
+        defer { controller.close() }
+
+        func visibleLabels(in view: NSView) -> [String] {
+            view.subviews.filter { !$0.isHidden }.flatMap { sub in (sub as? NSTextField).map { [$0.stringValue] } ?? visibleLabels(in: sub) }
+        }
+        let content = try XCTUnwrap(controller.window?.contentView)
+        XCTAssertFalse(visibleLabels(in: content).contains { $0.hasPrefix("No images") }, "unscanned reads as loading")
+        let deadline = Date().addingTimeInterval(2)
+        while !visibleLabels(in: content).contains(where: { $0.hasPrefix("No images") }), Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+        }
+        XCTAssertTrue(visibleLabels(in: content).contains { $0.hasPrefix("No images") })
+    }
+
     func testTilesSpinUntilTheirThumbnailLands() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("glance-load-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
