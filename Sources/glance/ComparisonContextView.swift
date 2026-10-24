@@ -69,10 +69,18 @@ final class ComparisonContextView: NSView {
                                            capacity: Int(rowBand.height / Self.rowHeight))
     }
 
+    /// When every shot fits they share the row header's whole height, like the grid's rows; a windowed
+    /// list keeps `rowHeight` slots.
+    private var slotHeight: CGFloat {
+        let window = rowWindow
+        return window.rows.count == comparison.rows ? rowBand.height / CGFloat(max(comparison.rows, 1)) : Self.rowHeight
+    }
+
     /// The shown slots, top to bottom from just under the column header: an optional "more" marker,
     /// the windowed rows, another optional marker.
     private func slotFrame(_ slot: Int) -> CGRect {
-        CGRect(x: 0, y: rowBand.minY + CGFloat(slot) * Self.rowHeight, width: Self.rowHeaderWidth, height: Self.rowHeight)
+        let height = slotHeight
+        return CGRect(x: 0, y: rowBand.minY + CGFloat(slot) * height, width: Self.rowHeaderWidth, height: height)
     }
 
     /// nil while the row is windowed out.

@@ -193,10 +193,13 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertEqual(context.rowLabels.map(\.textColor), [.secondaryLabelColor, .labelColor])
     }
 
-    func testRowLabelsStartJustUnderTheColumnHeader() throws {
+    func testRowLabelsSpreadDownTheWholeHeaderWhenTheyFit() throws {
         press(enter)
-        let first = try XCTUnwrap(controller.context?.rowLabelFrame(0))
-        XCTAssertEqual(first.minY, ComparisonContextView.columnHeaderHeight)
+        let context = try XCTUnwrap(controller.context)
+        let band = (context.bounds.height - ComparisonContextView.columnHeaderHeight) / 2
+        XCTAssertEqual(context.rowLabelFrame(0), CGRect(x: 0, y: ComparisonContextView.columnHeaderHeight,
+                                                         width: ComparisonContextView.rowHeaderWidth, height: band))
+        XCTAssertEqual(context.rowLabelFrame(1)?.maxY, context.bounds.height)
     }
 
     func testClickingAColumnLabelOpensThatVariantInTheSameShot() throws {
