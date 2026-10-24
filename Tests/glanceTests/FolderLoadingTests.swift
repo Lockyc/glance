@@ -23,8 +23,8 @@ final class FolderLoadingTests: XCTestCase {
         controller.close()
     }
 
-    /// A folder opens on the grid; with images only in its subfolders, the grid says so once scanned.
-    func testGridOfAFolderWithNoImagesReadsAsEmpty() throws {
+    /// A folder opens on the grid; with images only in its subfolders, it names them once scanned and offers to include them.
+    func testAFolderWithImagesOnlyInSubfoldersOffersToIncludeThem() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("glance-load-\(UUID().uuidString)")
         let sub = dir.appendingPathComponent("sub")
         try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
@@ -44,6 +44,13 @@ final class FolderLoadingTests: XCTestCase {
             RunLoop.main.run(until: Date().addingTimeInterval(0.02))
         }
         XCTAssertTrue(visibleLabels(in: content).contains { $0.hasPrefix("No images") })
+        XCTAssertTrue(visibleLabels(in: content).contains { $0.contains("sub") }, "names the subfolders")
+
+        let include = try XCTUnwrap(descendants(of: content, NSButton.self).first { !$0.isHidden && $0.title == "Include Subfolders" })
+        include.performClick(nil)
+        while model.files.isEmpty, Date() < deadline.addingTimeInterval(2) { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) }
+        XCTAssertEqual(model.files.map(\.lastPathComponent), ["a.png"])
+        XCTAssertFalse(visibleLabels(in: content).contains { $0.hasPrefix("No images") })
     }
 
     func testTilesSpinUntilTheirThumbnailLands() throws {
