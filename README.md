@@ -1,3 +1,5 @@
+<img src="Resources/icon.png" alt="glance" width="128" height="128">
+
 # glance
 
 [![Release](https://img.shields.io/github/v/release/lockyc/glance?sort=semver&label=release)](https://github.com/lockyc/glance/releases/latest)
