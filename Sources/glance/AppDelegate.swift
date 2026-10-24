@@ -1,5 +1,6 @@
 import AppKit
 import GlanceCore
+import Sparkle
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -7,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let thumbnails = ThumbnailService()
     private let roots: SubfolderRoots
     private var settingsWindow: NSWindow?
+    private var updater: SPUStandardUpdaterController?
     /// Tests clear this so opening a window never orders it onto the screen or takes focus.
     var ordersWindowsFront = true
 
@@ -16,7 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.mainMenu = MainMenu.make()
+        updater = Updater.make()
+        NSApp.mainMenu = MainMenu.make(updater: updater)
         NSApp.activate()
         // Only a plain launch asks for a file; a launch to open a URL or file brings its own.
         let isDefaultLaunch = (notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey] as? Bool) ?? true

@@ -1,11 +1,17 @@
 import AppKit
+import Sparkle
 
 enum MainMenu {
-    static func make() -> NSMenu {
+    static func make(updater: SPUStandardUpdaterController?) -> NSMenu {
         let main = NSMenu()
 
         let app = submenu(in: main, title: "glance")
         app.addItem(withTitle: "About glance", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        // Shown without an updater too (`swift run`), just inert, so the menu reads the same everywhere.
+        let check = app.addItem(withTitle: "Check for Updates…",
+                                action: updater.map { _ in #selector(SPUStandardUpdaterController.checkForUpdates(_:)) },
+                                keyEquivalent: "")
+        check.target = updater
         app.addItem(.separator())
         app.addItem(withTitle: "Settings…", action: #selector(AppDelegate.showSettings(_:)), keyEquivalent: ",")
         app.addItem(.separator())
