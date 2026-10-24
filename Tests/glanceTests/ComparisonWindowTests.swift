@@ -56,6 +56,7 @@ final class ComparisonWindowTests: XCTestCase {
     }
 
     private var right: NSEvent { key(String(UnicodeScalar(NSRightArrowFunctionKey)!), 124) }
+    private var left: NSEvent { key(String(UnicodeScalar(NSLeftArrowFunctionKey)!), 123) }
     private var up: NSEvent { key(String(UnicodeScalar(NSUpArrowFunctionKey)!), 126) }
     private var down: NSEvent { key(String(UnicodeScalar(NSDownArrowFunctionKey)!), 125) }
     private var esc: NSEvent { key("\u{1B}", 53) }
@@ -95,7 +96,11 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertEqual(model.current, url("c2"))
 
         press(right)
-        XCTAssertEqual(model.current, url("a2"), "wraps within the row and skips the empty cell")
+        XCTAssertEqual(model.current, url("c2"), "stops at the row's end")
+        press(left)
+        XCTAssertEqual(model.current, url("a2"), "skips the empty cell")
+        press(left)
+        XCTAssertEqual(model.current, url("a2"), "stops at the row's start")
         press(up)
         XCTAssertEqual(model.current, url("a1"))
         press(up)
@@ -243,8 +248,8 @@ final class ComparisonWindowTests: XCTestCase {
         press(enter)
         try click(controller.context?.columnLabelFrame(2))
         XCTAssertTrue(window.firstResponder is ViewerView)
-        press(right)
-        XCTAssertEqual(model.current, url("a1"), "wraps from c1 to a1")
+        press(left)
+        XCTAssertEqual(model.current, url("b1"))
     }
 
     func testClickOverThePhotoStillReachesTheViewer() throws {

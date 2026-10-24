@@ -41,8 +41,9 @@ final class ComparisonTests: XCTestCase {
 
     func testViewerStep() {
         let c = comparison
-        XCTAssertEqual(c.viewerStep(from: cell(0, 2), .right), cell(0, 0))
-        XCTAssertEqual(c.viewerStep(from: cell(1, 0), .right), cell(1, 2))
+        XCTAssertNil(c.viewerStep(from: cell(0, 2), .right), "stops at the row's end")
+        XCTAssertNil(c.viewerStep(from: cell(0, 0), .left), "stops at the row's start")
+        XCTAssertEqual(c.viewerStep(from: cell(1, 0), .right), cell(1, 2), "skips the empty cell")
         XCTAssertEqual(c.viewerStep(from: cell(1, 2), .left), cell(1, 0))
         XCTAssertEqual(c.viewerStep(from: cell(0, 0), .down), cell(1, 0))
         XCTAssertNil(c.viewerStep(from: cell(0, 1), .down))
@@ -76,15 +77,15 @@ final class ComparisonTests: XCTestCase {
     }
 
     func testMapSmallGridUsesMaxCellSide() {
-        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 3, rows: 2), 12)
-        XCTAssertEqual(ComparisonMapLayout.size(columns: 3, rows: 2), CGSize(width: 50, height: 36))
+        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 3, rows: 2), 18)
+        XCTAssertEqual(ComparisonMapLayout.size(columns: 3, rows: 2), CGSize(width: 5*2 + 3*18 + 2*2, height: 5*2 + 2*18 + 2))
     }
 
     func testManyRowsClampToMinimumSide() {
-        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 5, rows: 40), 3)
-        XCTAssertEqual(ComparisonMapLayout.size(columns: 5, rows: 40).height, 208)
-        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 5, rows: 15), (120 - 10 - 28) / 15, accuracy: 0.001)
-        XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 15).height, 120.001)
+        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 5, rows: 80), 3)
+        XCTAssertEqual(ComparisonMapLayout.size(columns: 5, rows: 80).height, 10 + 80*3 + 79*2)
+        XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 5, rows: 15), (180 - 10 - 28) / 15, accuracy: 0.001)
+        XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 15).height, 180.001)
     }
 
     private func window(_ rows: Range<Int>, above: Int, below: Int) -> ComparisonHeaderLayout.Window {
@@ -124,13 +125,13 @@ final class ComparisonTests: XCTestCase {
         XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 40, bound: bound).height, 150)
         XCTAssertLessThanOrEqual(ComparisonMapLayout.size(columns: 5, rows: 200, bound: CGSize(width: 400, height: 800)).height, 800)
         XCTAssertEqual(ComparisonMapLayout.cellSide(columns: 5, rows: 400, bound: bound), 1, "never below a point")
-        XCTAssertEqual(ComparisonMapLayout.size(columns: 3, rows: 2, bound: bound), CGSize(width: 50, height: 36), "a roomy bound changes nothing")
+        XCTAssertEqual(ComparisonMapLayout.size(columns: 3, rows: 2, bound: bound), CGSize(width: 68, height: 48), "a roomy bound changes nothing")
         let rect = ComparisonMapLayout.rect(of: cell(39, 4), columns: 5, rows: 40, bound: bound)
         XCTAssertEqual(ComparisonMapLayout.cell(at: CGPoint(x: rect.midX, y: rect.midY), columns: 5, rows: 40, bound: bound), cell(39, 4))
     }
 
     func testMapCellRectAndHitTestRoundTrip() {
-        XCTAssertEqual(ComparisonMapLayout.rect(of: cell(1, 2), columns: 3, rows: 2), CGRect(x: 33, y: 19, width: 12, height: 12))
+        XCTAssertEqual(ComparisonMapLayout.rect(of: cell(1, 2), columns: 3, rows: 2), CGRect(x: 45, y: 25, width: 18, height: 18))
         for r in 0..<2 {
             for c in 0..<3 {
                 let rect = ComparisonMapLayout.rect(of: cell(r, c), columns: 3, rows: 2)
@@ -140,7 +141,7 @@ final class ComparisonTests: XCTestCase {
     }
 
     func testMapHitTestMissesGapsAndOutside() {
-        XCTAssertNil(ComparisonMapLayout.cell(at: CGPoint(x: 18, y: 8), columns: 3, rows: 2))
+        XCTAssertNil(ComparisonMapLayout.cell(at: CGPoint(x: 24, y: 8), columns: 3, rows: 2))
         XCTAssertNil(ComparisonMapLayout.cell(at: CGPoint(x: 2, y: 2), columns: 3, rows: 2))
         XCTAssertNil(ComparisonMapLayout.cell(at: CGPoint(x: 500, y: 8), columns: 3, rows: 2))
     }

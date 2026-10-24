@@ -107,7 +107,7 @@ folder reuses its existing window.
 | Key | Action |
 |---|---|
 | Arrows (grid) | Move the selection between cells |
-| ← / → (viewer) | Same shot in the previous / next variant (wraps) |
+| ← / → (viewer) | Same shot in the previous / next variant |
 | ↑ / ↓ (viewer) | Previous / next shot in the same variant |
 | Return or click | Open the cell in the viewer |
 | Click a header or the map (viewer) | Open that cell |
