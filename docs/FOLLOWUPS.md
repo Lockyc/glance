@@ -9,9 +9,6 @@ links:
 
 Deliberately deferred work. Remove an entry when it ships.
 
-- **Installer (`install.sh` + `/glance:install`).** Install is `just install` from a clone
-  today. A curl-pipeable `install.sh` and the guided slash command would let someone without
-  `just` install glance. Unlock: someone other than the author installing it.
 - **RAW at actual size shows the embedded preview.** `ImageDecoder` takes a RAW's embedded JPEG
   when it is at least half the requested size, including for zoom upgrades, so a camera whose
   preview is under full size looks soft at 100%. Fix: skip the embedded preview for upgrades.

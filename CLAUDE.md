@@ -24,6 +24,8 @@ except PDF. One Swift package, no Xcode project, no third-party dependencies.
 Package.swift
 VERSION                  # the one version source
 justfile                 # recipes: `just` lists them
+install.sh               # curl-pipeable installer: latest release's glance.zip, team-ID + notarization checked
+.claude/commands/glance/install.md  # the guided /glance:install over install.sh
 Sources/GlanceCore/      # all logic — unit-tested
 Sources/glance/          # the AppKit shell (executable)
 Resources/Info.plist     # bundle template; `just bundle` fills its version (from VERSION)
