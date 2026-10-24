@@ -30,7 +30,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let empty = EmptyFolderView()
     /// Set for a comparison window: the grid is the variant × shot grid and the viewer steps in 2D.
     private let comparison: Comparison?
-    /// A comparison's strip and map over the viewer; nil for any other window.
+    /// A comparison's headers and map over the viewer; nil for any other window.
     private(set) var context: ComparisonContextView?
     private(set) var showingGrid = false
     /// Full-detail re-decodes for zoom run one at a time; a newer request or a change of file cancels the last.
@@ -80,10 +80,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             container.addSubview(child)
         }
         if let comparison {
-            let context = ComparisonContextView(comparison: comparison, thumbnails: thumbnails)
+            let context = ComparisonContextView(comparison: comparison)
             context.frame = container.bounds
             context.autoresizingMask = [.width, .height]
-            context.isHidden = true // until showViewer, so a window that opens on the grid requests no strip thumbnails
+            context.isHidden = true // until showViewer
             container.addSubview(context, positioned: .above, relativeTo: viewer)
             self.context = context
         }
@@ -176,11 +176,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         layoutViewer()
     }
 
-    /// The viewer leaves the bottom strip to a comparison's context while it is shown.
+    /// The viewer leaves the headers to a comparison's context while it is shown.
     private func layoutViewer() {
         guard let container = window?.contentView else { return }
-        let inset = context != nil && Self.showsContext ? ComparisonContextView.stripHeight : 0
-        viewer.frame = NSRect(x: 0, y: inset, width: container.bounds.width, height: container.bounds.height - inset)
+        let shown = context != nil && Self.showsContext
+        let left = shown ? ComparisonContextView.rowHeaderWidth : 0, top = shown ? ComparisonContextView.columnHeaderHeight : 0
+        viewer.frame = NSRect(x: left, y: 0, width: container.bounds.width - left, height: container.bounds.height - top)
     }
 
     // MARK: Model

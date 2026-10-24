@@ -154,10 +154,17 @@ final class ComparisonWindowTests: XCTestCase {
         content.hitTest(content.convert(location, from: nil))?.mouseDown(with: event)
     }
 
-    private func stripClick(column: Int) throws {
+    private func click(_ frame: CGRect?) throws {
         let context = try XCTUnwrap(controller.context)
-        let frame = context.stripFrame(column: column)
+        let frame = try XCTUnwrap(frame)
         click(CGPoint(x: frame.midX, y: frame.midY), in: context)
+    }
+
+    /// The viewer's frame while the headers show: right of the row header, below the column header.
+    private var insetViewerFrame: NSRect {
+        let bounds = window.contentView!.bounds
+        return NSRect(x: ComparisonContextView.rowHeaderWidth, y: 0, width: bounds.width - ComparisonContextView.rowHeaderWidth,
+                      height: bounds.height - ComparisonContextView.columnHeaderHeight)
     }
 
     func testContextShowsInTheViewerOnly() throws {
@@ -165,30 +172,39 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertTrue(context.isHidden)
         press(enter)
         XCTAssertFalse(context.isHidden)
-        XCTAssertEqual(viewer.frame.minY, ComparisonContextView.stripHeight)
+        XCTAssertEqual(viewer.frame, insetViewerFrame)
         press(esc)
         XCTAssertTrue(context.isHidden)
     }
 
-    func testStripFollowsTheRowAndHighlightsTheCurrentCell() throws {
+    func testHeadersHighlightTheCurrentCell() throws {
         press(enter)
         press(down)
         XCTAssertEqual(model.current, url("a2"))
-        let strip = try XCTUnwrap(controller.context).stripCells
-        XCTAssertEqual(strip.map(\.url), [url("a2"), nil, url("c2")])
-        XCTAssertEqual(strip.map(\.isSelected), [true, false, false])
+        let context = try XCTUnwrap(controller.context)
+        XCTAssertEqual(context.columnLabels.map(\.stringValue), ["a", "b", "c"])
+        XCTAssertEqual(context.columnLabels.map(\.textColor), [.labelColor, .tertiaryLabelColor, .secondaryLabelColor],
+                       "current, empty in this shot, other")
+        XCTAssertEqual(context.rowLabels.map(\.textColor), [.secondaryLabelColor, .labelColor])
     }
 
-    func testClickingAStripCellOpensIt() throws {
+    func testClickingAColumnLabelOpensThatVariantInTheSameShot() throws {
         press(enter)
-        try stripClick(column: 2)
+        try click(controller.context?.columnLabelFrame(2))
         XCTAssertEqual(model.current, url("c1"))
     }
 
-    func testClickingAnEmptyStripCellDoesNothing() throws {
+    func testClickingARowLabelOpensThatShotInTheSameVariant() throws {
+        press(enter)
+        try click(controller.context?.columnLabelFrame(2))
+        try click(controller.context?.rowLabelFrame(1))
+        XCTAssertEqual(model.current, url("c2"))
+    }
+
+    func testClickingALabelWhoseCellIsEmptyDoesNothing() throws {
         press(enter)
         press(down)
-        try stripClick(column: 1)
+        try click(controller.context?.columnLabelFrame(1))
         XCTAssertEqual(model.current, url("a2"))
     }
 
@@ -200,9 +216,9 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertEqual(model.current, url("c2"))
     }
 
-    func testClickingTheStripKeepsTheViewerFocused() throws {
+    func testClickingAHeaderKeepsTheViewerFocused() throws {
         press(enter)
-        try stripClick(column: 2)
+        try click(controller.context?.columnLabelFrame(2))
         XCTAssertTrue(window.firstResponder is ViewerView)
         press(right)
         XCTAssertEqual(model.current, url("a1"), "wraps from c1 to a1")
@@ -224,7 +240,7 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertEqual(UserDefaults.standard.object(forKey: BrowserWindowController.contextKey) as? Bool, false)
         controller.toggleComparisonContext(nil)
         XCTAssertFalse(context.isHidden)
-        XCTAssertEqual(viewer.frame.minY, ComparisonContextView.stripHeight)
+        XCTAssertEqual(viewer.frame, insetViewerFrame)
     }
 
     func testToggleWhileInTheGridStaysHidden() throws {
@@ -254,23 +270,53 @@ final class ComparisonWindowTests: XCTestCase {
         XCTAssertEqual(item.state, .off)
     }
 
-    func testALongComparisonsMapStaysAboveTheStrip() {
-        let long = Comparison(variants: [Variant(label: "a", files: (0..<100).map { URL(fileURLWithPath: "/x/a\($0).png") })])
-        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
-        let context = ComparisonContextView(comparison: long, thumbnails: ThumbnailService(decoder: decoder, cacheDirectory: cache))
+    private func standalone(_ variants: [Variant], current: Comparison.Cell) -> ComparisonContextView {
+        let context = ComparisonContextView(comparison: Comparison(variants: variants))
         context.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
-        XCTAssertLessThanOrEqual(context.mapFrame.maxY, 400 - ComparisonContextView.stripHeight - ComparisonContextView.mapMargin)
+        context.current = current
+        context.layoutSubtreeIfNeeded()
+        return context
     }
 
-    func testStripCellsShareTheWidth() {
-        let wide = Comparison(variants: (0..<12).map { Variant(label: "v\($0)", files: [URL(fileURLWithPath: "/x/v\($0).png")]) })
-        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("glance-thumbs-\(UUID().uuidString)")
-        let context = ComparisonContextView(comparison: wide, thumbnails: ThumbnailService(decoder: decoder, cacheDirectory: cache))
-        context.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
-        context.layoutSubtreeIfNeeded()
-        let frames = (0..<12).map(context.stripFrame(column:))
-        XCTAssertLessThanOrEqual(frames[11].maxX, 600 - 6)
-        XCTAssertGreaterThanOrEqual(frames[0].minX, 6)
+    private var longVariant: Variant { Variant(label: "a", files: (0..<100).map { URL(fileURLWithPath: "/x/a-\($0).png") }) }
+
+    func testALongComparisonsMapStaysInThePhotoArea() {
+        let context = standalone([longVariant], current: cell(0, 0))
+        XCTAssertLessThanOrEqual(context.mapFrame.maxY, 400 - ComparisonContextView.mapMargin)
+        XCTAssertGreaterThanOrEqual(context.mapFrame.minY, ComparisonContextView.columnHeaderHeight + ComparisonContextView.mapMargin)
+    }
+
+    func testManyRowsWindowAroundTheCurrentOne() throws {
+        let context = standalone([longVariant], current: cell(50, 0))
+        var selected: [Comparison.Cell] = []
+        context.onSelect = { selected.append($0) }
+        let header = CGRect(x: 0, y: ComparisonContextView.columnHeaderHeight, width: ComparisonContextView.rowHeaderWidth,
+                            height: 400 - ComparisonContextView.columnHeaderHeight)
+        let shown = (0..<100).compactMap(context.rowLabelFrame)
+        XCTAssertFalse(shown.isEmpty)
+        XCTAssertLessThan(shown.count, 100)
+        XCTAssertTrue(shown.allSatisfy(header.contains), "every shown label inside the row header")
+        XCTAssertNil(context.rowLabelFrame(0))
+        XCTAssertNotNil(context.rowLabelFrame(50))
+        XCTAssertEqual(context.rowLabels.filter { !$0.isHidden }.count, shown.count)
+        // The slot above the first shown label is the "more" marker.
+        let first = try XCTUnwrap(shown.first)
+        let marker = context.convert(CGPoint(x: first.midX, y: first.midY - ComparisonContextView.rowHeight), to: nil)
+        context.mouseDown(with: NSEvent.mouseEvent(with: .leftMouseDown, location: marker, modifierFlags: [], timestamp: 0, windowNumber: 0,
+                                                   context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+        XCTAssertTrue(selected.isEmpty)
+        let label = context.convert(CGPoint(x: first.midX, y: first.midY), to: nil)
+        context.mouseDown(with: NSEvent.mouseEvent(with: .leftMouseDown, location: label, modifierFlags: [], timestamp: 0, windowNumber: 0,
+                                                   context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+        XCTAssertEqual(selected.count, 1, "the label itself does select, so the marker miss is real")
+    }
+
+    func testColumnLabelsShareTheWidth() {
+        let wide = (0..<12).map { Variant(label: "v\($0)", files: [URL(fileURLWithPath: "/x/v\($0).png")]) }
+        let context = standalone(wide, current: cell(0, 0))
+        let frames = (0..<12).map(context.columnLabelFrame)
+        XCTAssertLessThanOrEqual(frames[11].maxX, 600)
+        XCTAssertGreaterThanOrEqual(frames[0].minX, ComparisonContextView.rowHeaderWidth)
         XCTAssertEqual(Set(frames.map(\.width)).count, 1)
     }
 

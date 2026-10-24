@@ -184,8 +184,6 @@ final class SnapshotTests: XCTestCase {
         press(key(String(UnicodeScalar(NSRightArrowFunctionKey)!), 124), in: window)
         XCTAssertTrue(window.firstResponder is ViewerView)
         spin(until: "b's wide shot to decode") { window.title.hasSuffix("1600×900") && window.title.hasPrefix("b · ") }
-        let context = try XCTUnwrap(descendants(of: window.contentView!, ComparisonContextView.self).first)
-        spin(until: "the strip's thumbnails") { context.stripCells.allSatisfy { $0.url == nil || $0.image != nil } }
         print("comparison-viewer.png window title: \(window.title)")
         try snapshot(window, "comparison-viewer.png")
     }

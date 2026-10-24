@@ -1,124 +1,187 @@
 import AppKit
 import GlanceCore
 
-/// Overlays a comparison window's viewer: the current shot in every variant as a strip along the
-/// bottom, and the whole grid as a minimap in the top-right corner. Clicks anywhere else fall
-/// through to the viewer, and a click here never takes the keyboard from it.
+/// Overlays a comparison window's viewer with the grid's edges: every variant across the top and
+/// every shot down the left, the current ones highlighted, plus a minimap of the grid in the photo's
+/// top-right corner. Clicking a label or a map cell opens that cell; clicks anywhere else fall through
+/// to the viewer, and a click here never takes the keyboard from it.
 final class ComparisonContextView: NSView {
-    static let stripHeight: CGFloat = 76
-    static let maxStripCellWidth: CGFloat = 96
+    static let columnHeaderHeight: CGFloat = 24
+    static let rowHeight: CGFloat = 24
+    static var rowHeaderWidth: CGFloat { ComparisonGridViewController.labelWidth }
     static let mapMargin: CGFloat = 12
-    private static let inset: CGFloat = 6
-    private static let cellHeight: CGFloat = 54
+    private static let labelInset: CGFloat = 10
+    private static let textHeight: CGFloat = 16
 
     var onSelect: ((Comparison.Cell) -> Void)?
     var current: Comparison.Cell? {
         didSet {
             map.current = current
-            refresh()
+            needsLayout = true
+            update()
         }
     }
 
     private let comparison: Comparison
-    private let thumbnails: ThumbnailService
-    private let band = NSView()
     private let map: MapView
-    private(set) var stripCells: [ComparisonCellView]
-    private let labels: [NSTextField]
+    private(set) var columnLabels: [NSTextField]
+    private(set) var rowLabels: [NSTextField]
+    private let aboveMarker = ComparisonContextView.label("", alignment: .left)
+    private let belowMarker = ComparisonContextView.label("", alignment: .left)
 
-    init(comparison: Comparison, thumbnails: ThumbnailService) {
+    init(comparison: Comparison) {
         self.comparison = comparison
-        self.thumbnails = thumbnails
         map = MapView(comparison: comparison)
-        stripCells = comparison.variants.map { _ in ComparisonCellView() }
-        labels = comparison.variants.map { variant in
-            let label = NSTextField(labelWithString: variant.label)
-            label.font = .systemFont(ofSize: 10, weight: .medium)
-            label.textColor = .secondaryLabelColor
-            label.alignment = .center
-            label.lineBreakMode = .byTruncatingMiddle
-            return label
-        }
+        columnLabels = comparison.variants.map { Self.label($0.label, alignment: .center) }
+        rowLabels = (0..<comparison.rows).map { Self.label(comparison.rowLabel($0), alignment: .left) }
         super.init(frame: .zero)
-        band.wantsLayer = true
-        band.layer?.backgroundColor = NSColor(white: 0.09, alpha: 1).cgColor
-        addSubview(band)
-        stripCells.forEach(addSubview)
-        labels.forEach(addSubview)
+        for marker in [aboveMarker, belowMarker] { marker.textColor = .tertiaryLabelColor }
+        (columnLabels + rowLabels + [aboveMarker, belowMarker]).forEach(addSubview)
         addSubview(map)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
+    private static func label(_ text: String, alignment: NSTextAlignment) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: 11, weight: .medium)
+        label.alignment = alignment
+        label.lineBreakMode = .byTruncatingMiddle
+        return label
+    }
+
     override var isFlipped: Bool { true }
 
-    private var cellWidth: CGFloat {
-        let n = CGFloat(max(comparison.columns, 1))
-        return min(Self.maxStripCellWidth, (bounds.width - 2 * Self.inset - Self.inset * (n - 1)) / n)
+    // MARK: Geometry
+
+    private var columnBand: CGRect { CGRect(x: 0, y: 0, width: bounds.width, height: Self.columnHeaderHeight) }
+    private var rowBand: CGRect {
+        CGRect(x: 0, y: Self.columnHeaderHeight, width: Self.rowHeaderWidth, height: max(0, bounds.height - Self.columnHeaderHeight))
     }
 
-    func stripFrame(column: Int) -> CGRect {
-        let n = CGFloat(comparison.columns), width = cellWidth
-        let left = (bounds.width - (n * width + (n - 1) * Self.inset)) / 2
-        return CGRect(x: left + CGFloat(column) * (width + Self.inset), y: bounds.height - Self.stripHeight + Self.inset,
-                      width: width, height: Self.cellHeight)
+    func columnLabelFrame(_ column: Int) -> CGRect {
+        let width = (bounds.width - Self.rowHeaderWidth) / CGFloat(max(comparison.columns, 1))
+        return CGRect(x: Self.rowHeaderWidth + CGFloat(column) * width, y: 0, width: width, height: Self.columnHeaderHeight)
     }
 
-    /// The photo area the map may cover: above the strip, inside the margins.
+    private var rowWindow: ComparisonHeaderLayout.Window {
+        ComparisonHeaderLayout.visibleRows(current: current?.row ?? 0, rows: comparison.rows,
+                                           capacity: Int(rowBand.height / Self.rowHeight))
+    }
+
+    /// The shown slots, top to bottom, vertically centred in the row header: an optional "more" marker,
+    /// the windowed rows, another optional marker.
+    private var slotTop: CGFloat {
+        let window = rowWindow
+        let slots = window.rows.count + (window.above > 0 ? 1 : 0) + (window.below > 0 ? 1 : 0)
+        return rowBand.minY + max(0, (rowBand.height - CGFloat(slots) * Self.rowHeight) / 2)
+    }
+
+    private func slotFrame(_ slot: Int) -> CGRect {
+        CGRect(x: 0, y: slotTop + CGFloat(slot) * Self.rowHeight, width: Self.rowHeaderWidth, height: Self.rowHeight)
+    }
+
+    /// nil while the row is windowed out.
+    func rowLabelFrame(_ row: Int) -> CGRect? {
+        let window = rowWindow
+        guard window.rows.contains(row) else { return nil }
+        return slotFrame(row - window.rows.lowerBound + (window.above > 0 ? 1 : 0))
+    }
+
+    /// The photo area the map may cover, inside its margins.
     private var mapBound: CGSize {
-        CGSize(width: bounds.width - 2 * Self.mapMargin, height: bounds.height - Self.stripHeight - 2 * Self.mapMargin)
+        CGSize(width: bounds.width - Self.rowHeaderWidth - 2 * Self.mapMargin,
+               height: bounds.height - Self.columnHeaderHeight - 2 * Self.mapMargin)
     }
 
     var mapFrame: CGRect {
         let size = ComparisonMapLayout.size(columns: comparison.columns, rows: comparison.rows, bound: mapBound)
-        return CGRect(origin: CGPoint(x: bounds.width - Self.mapMargin - size.width, y: Self.mapMargin), size: size)
+        return CGRect(origin: CGPoint(x: bounds.width - Self.mapMargin - size.width, y: Self.columnHeaderHeight + Self.mapMargin), size: size)
     }
 
-    private var bandFrame: CGRect { CGRect(x: 0, y: bounds.height - Self.stripHeight, width: bounds.width, height: Self.stripHeight) }
+    /// A label's text frame inside its slot: vertically centred, inset from the slot's sides.
+    private func textFrame(in slot: CGRect, inset: CGFloat) -> CGRect {
+        CGRect(x: slot.minX + inset, y: slot.midY - Self.textHeight / 2, width: max(0, slot.width - 2 * inset), height: Self.textHeight)
+    }
+
+    // MARK: Layout and state
 
     override func layout() {
         super.layout()
-        band.frame = bandFrame
         map.bound = mapBound
         map.frame = mapFrame
-        for column in stripCells.indices {
-            let frame = stripFrame(column: column)
-            stripCells[column].frame = frame
-            labels[column].frame = CGRect(x: frame.minX, y: frame.maxY, width: frame.width, height: Self.stripHeight - Self.inset - Self.cellHeight)
+        for column in columnLabels.indices {
+            columnLabels[column].frame = textFrame(in: columnLabelFrame(column), inset: 4)
         }
-        refresh()
+        let window = rowWindow
+        for row in rowLabels.indices {
+            let frame = rowLabelFrame(row)
+            rowLabels[row].isHidden = frame == nil
+            if let frame { rowLabels[row].frame = textFrame(in: frame, inset: Self.labelInset) }
+        }
+        aboveMarker.isHidden = window.above == 0
+        aboveMarker.stringValue = "⋮ \(window.above) more"
+        aboveMarker.frame = textFrame(in: slotFrame(0), inset: Self.labelInset)
+        belowMarker.isHidden = window.below == 0
+        belowMarker.stringValue = "⋮ \(window.below) more"
+        belowMarker.frame = textFrame(in: slotFrame(window.rows.count + (window.above > 0 ? 1 : 0)), inset: Self.labelInset)
+        update()
     }
 
-    override func viewDidUnhide() {
-        super.viewDidUnhide()
-        refresh()
-    }
-
-    /// Thumbnails are requested only while shown, so a comparison that stays in the grid decodes nothing extra.
-    private func refresh() {
-        guard let current, !isHiddenOrHasHiddenAncestor else { return }
-        let pixels = Int((cellWidth * (window?.backingScaleFactor ?? 2)).rounded(.up))
-        for column in stripCells.indices {
+    /// Current: full-strength; a label whose cell is empty in the current shot or variant: dimmed.
+    private func update() {
+        guard let current else { return }
+        for column in columnLabels.indices {
             let cell = Comparison.Cell(row: current.row, column: column)
-            stripCells[column].configure(url: comparison.file(at: cell), pixelSize: pixels, service: thumbnails)
-            stripCells[column].isSelected = cell == current
+            columnLabels[column].textColor = column == current.column ? .labelColor
+                : comparison.file(at: cell) == nil ? .tertiaryLabelColor : .secondaryLabelColor
+        }
+        for row in rowLabels.indices {
+            let cell = Comparison.Cell(row: row, column: current.column)
+            rowLabels[row].textColor = row == current.row ? .labelColor
+                : comparison.file(at: cell) == nil ? .tertiaryLabelColor : .secondaryLabelColor
+        }
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor(white: 0.09, alpha: 1).setFill()
+        columnBand.fill()
+        rowBand.fill()
+        guard let current else { return }
+        let accent = NSColor.controlAccentColor
+        let column = columnLabelFrame(current.column)
+        accent.withAlphaComponent(0.2).setFill()
+        column.fill()
+        accent.setFill()
+        CGRect(x: column.minX, y: column.maxY - 2, width: column.width, height: 2).fill()
+        if let row = rowLabelFrame(current.row) {
+            accent.withAlphaComponent(0.2).setFill()
+            row.fill()
+            accent.setFill()
+            CGRect(x: row.minX, y: row.minY, width: 2, height: row.height).fill()
         }
     }
+
+    // MARK: Clicks
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard !isHidden else { return nil }
         let local = convert(point, from: superview)
-        return bandFrame.contains(local) || mapFrame.contains(local) ? self : nil
+        return columnBand.contains(local) || rowBand.contains(local) || mapFrame.contains(local) ? self : nil
     }
 
     override func mouseDown(with event: NSEvent) {
+        guard let current else { return }
         let point = convert(event.locationInWindow, from: nil)
         let target: Comparison.Cell?
         if mapFrame.contains(point) {
             target = ComparisonMapLayout.cell(at: CGPoint(x: point.x - mapFrame.minX, y: point.y - mapFrame.minY),
                                               columns: comparison.columns, rows: comparison.rows, bound: mapBound)
-        } else if let current, let column = stripCells.indices.first(where: { stripFrame(column: $0).contains(point) }) {
+        } else if let column = columnLabels.indices.first(where: { columnLabelFrame($0).contains(point) }) {
             target = Comparison.Cell(row: current.row, column: column)
+        } else if let row = rowWindow.rows.first(where: { rowLabelFrame($0)?.contains(point) == true }) {
+            target = Comparison.Cell(row: row, column: current.column)
         } else {
             target = nil
         }
