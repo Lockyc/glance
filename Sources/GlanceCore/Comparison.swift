@@ -178,3 +178,31 @@ public enum ComparisonMapLayout {
         return cell
     }
 }
+
+/// The comparison viewer's row header: which shot labels fit, as a window around the current one.
+public enum ComparisonHeaderLayout {
+    public struct Window: Equatable {
+        public let rows: Range<Int>
+        /// Rows hidden before and after `rows`, each named by an "N more" marker in its own slot.
+        public let above: Int
+        public let below: Int
+
+        public init(rows: Range<Int>, above: Int, below: Int) {
+            self.rows = rows
+            self.above = above
+            self.below = below
+        }
+    }
+
+    /// `capacity` slots; a clipped end spends one on its marker. With under three slots only the current row shows.
+    public static func visibleRows(current: Int, rows: Int, capacity: Int) -> Window {
+        func window(_ range: Range<Int>) -> Window { Window(rows: range, above: range.lowerBound, below: rows - range.upperBound) }
+        if rows <= capacity { return window(0..<rows) }
+        if capacity < 3 { return window(current..<(current + 1)) }
+        let labels = capacity - 2
+        let start = current - labels / 2
+        if start <= 0 { return window(0..<(capacity - 1)) }
+        if start + labels >= rows { return window((rows - capacity + 1)..<rows) }
+        return window(start..<(start + labels))
+    }
+}
