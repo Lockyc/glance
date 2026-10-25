@@ -39,6 +39,10 @@ public enum LaunchRequest: Equatable, Codable {
                glance --variant <label> <file>... [--variant <label> <file>...]...
                                                           compare labelled variants side by side
         --variant starts a labelled group of files; one or more groups make a comparison.
+        Each variant is a column; row n holds every variant's nth file, so list each variant's
+        shots in the same order. A row is named after its file stem with the variant label
+        removed (hero-v2-dark.png under --variant v2 reads hero-dark). A comparison takes
+        files, not folders.
         """
 
     /// Under Launch Services, no arguments or a leading Cocoa `-flag` means run the app. From a
