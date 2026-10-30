@@ -84,6 +84,8 @@ run *paths: bundle
 install: bundle quit
     rm -rf /Applications/glance.app
     cp -R "{{app}}" /Applications/glance.app
+    @# the commit this build came from: lets a later release (lockstep.sh) tell whether it is newer before replacing it
+    xattr -w com.lockyc.build-commit "$(git rev-parse HEAD)$(git status --porcelain | grep -q . && echo -dirty)" /Applications/glance.app
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/glance.app
     mkdir -p ~/.local/bin && ln -sf /Applications/glance.app/Contents/MacOS/glance ~/.local/bin/glance
 
