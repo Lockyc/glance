@@ -34,9 +34,9 @@ Deliberately deferred work. Remove an entry when it ships.
   emptying the window (same as a flat folder today).
 - **Comparison row labels scroll away horizontally** when many variants overflow the width; only
   the header is pinned. Fix: pin the label column like the header.
-- **Possible spurious horizontal scroller with always-visible scrollbars** in both grids: the
-  comparison grid sizes its cells before the scrollers appear, and `GridViewController` never
-  autohides its scrollers. Fix: size cells against the content width with scrollers shown.
+- **Possible spurious horizontal scroller with always-visible scrollbars** in the comparison
+  grid: it sizes its cells before the scrollers appear. Fix: size cells against the content width
+  with scrollers shown.
 - **The comparison viewer prefetches in list order, not 2D**, so ↑/↓ and the row wrap may decode
   cold. Fix: focus `DecodeCache` on the cell's 2D neighbours.
 - **The cold-launch Open-panel guard (`isDefaultLaunch`) is untested against a real cold launch by

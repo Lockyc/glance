@@ -59,7 +59,7 @@ final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewD
         collectionView.dataSource = self
         collectionView.isSelectable = true
         collectionView.allowsMultipleSelection = true
-        collectionView.backgroundColors = [NSColor(white: 0.08, alpha: 1)]
+        collectionView.backgroundColors = [NSColor.glanceBackground]
         collectionView.register(ThumbnailItem.self, forItemWithIdentifier: ThumbnailItem.identifier)
         collectionView.register(MonthHeaderView.self, forSupplementaryViewOfKind: NSCollectionView.elementKindSectionHeader,
                                 withIdentifier: MonthHeaderView.identifier)

@@ -10,7 +10,7 @@ final class MonthHeaderView: NSView, NSCollectionViewElement {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.backgroundColor = NSColor(white: 0.08, alpha: 0.94).cgColor
+        layer?.backgroundColor = NSColor.glanceBackground.withAlphaComponent(0.94).cgColor
         label.font = .systemFont(ofSize: 13, weight: .semibold)
         label.textColor = .secondaryLabelColor
         addSubview(label)

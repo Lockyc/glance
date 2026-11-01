@@ -14,7 +14,8 @@ A native macOS (14+) image viewer: ←/→ through the current folder (or, for a
 Include Subfolders on, its whole tree oldest-first), a thumbnail grid with
 hover-enlarge preview, zoom/pan/fullscreen, image sets (`glance <files>`), a comparison grid of
 labelled variants (`glance --variant …`), and the default handler for every image type
-except PDF. One Swift package, no Xcode project, no third-party dependencies.
+except PDF. One Swift package, no Xcode project, and one dependency: Sparkle, for in-app updates
+(pinned in `Package.swift`; `just bundle` embeds and signs `Sparkle.framework`).
 
 **What's next:** `docs/FOLLOWUPS.md` — deliberately deferred work.
 

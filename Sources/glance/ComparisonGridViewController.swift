@@ -66,7 +66,7 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
     override func loadView() {
         let root = NSView()
         header.wantsLayer = true
-        header.layer?.backgroundColor = NSColor(white: 0.08, alpha: 1).cgColor
+        header.layer?.backgroundColor = NSColor.glanceBackground.cgColor
         for variant in comparison.variants {
             let label = NSTextField(labelWithString: variant.label)
             label.font = .systemFont(ofSize: 12, weight: .medium)
@@ -86,7 +86,7 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
         scrollView.hasHorizontalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.drawsBackground = true
-        scrollView.backgroundColor = NSColor(white: 0.08, alpha: 1)
+        scrollView.backgroundColor = NSColor.glanceBackground
         root.addSubview(header)
         root.addSubview(scrollView)
         root.addSubview(preview)

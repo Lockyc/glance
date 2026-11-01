@@ -34,6 +34,8 @@ public enum LaunchRequest: Equatable, Codable {
     public static let usage = """
         usage: glance                                     open the app, or bring it forward
                glance -h | --help                         show this help
+               glance --make-default                      make glance the default viewer for every
+                                                          image type except PDF
                glance <folder>                            open a folder
                glance <file>...                           open files as a set
                glance --variant <label> <file>... [--variant <label> <file>...]...

@@ -24,7 +24,7 @@ final class ViewerView: NSView, ZoomActions {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.backgroundColor = NSColor(white: 0.08, alpha: 1).cgColor
+        layer?.backgroundColor = NSColor.glanceBackground.cgColor
         imageLayer.contentsGravity = .resize
         imageLayer.minificationFilter = .trilinear
         imageLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
