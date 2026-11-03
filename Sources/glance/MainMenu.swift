@@ -23,6 +23,7 @@ enum MainMenu {
         let file = submenu(in: main, title: "File")
         file.addItem(withTitle: "Open…", action: #selector(AppDelegate.openDocument(_:)), keyEquivalent: "o")
         file.addItem(withTitle: "Edit in Excerpt", action: #selector(BrowserWindowController.editInExcerpt(_:)), keyEquivalent: "e")
+        file.addItem(withTitle: "Show in Finder", action: #selector(BrowserWindowController.showInFinder(_:)), keyEquivalent: "r")
         file.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
 
         let view = submenu(in: main, title: "View")

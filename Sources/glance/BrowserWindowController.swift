@@ -23,6 +23,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     }
     var excerpt = Excerpt.system
 
+    /// Where Show in Finder sends images; tests swap it for a recorder. Finder opens each image's folder with it selected.
+    var finder: ([URL]) -> Void = { NSWorkspace.shared.activateFileViewerSelecting($0) }
+
     private let decodeCache: DecodeCache
     private let viewer: ViewerView
     private let grid: any BrowserGrid
@@ -361,10 +364,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 }
 
 extension BrowserWindowController {
-    /// The grid's selection while the grid shows, else the image in view.
-    private var editTargets: [URL] { showingGrid ? grid.selectedFiles : model.current.map { [$0] } ?? [] }
+    /// The grid's selection while the grid shows, else the image in view: what Edit in Excerpt and Show in Finder act on.
+    private var targets: [URL] { showingGrid ? grid.selectedFiles : model.current.map { [$0] } ?? [] }
 
-    private var editRefusal: String? { ExternalEditor.refusal(for: editTargets, installed: excerpt.installed()) }
+    private var editRefusal: String? { ExternalEditor.refusal(for: targets, installed: excerpt.installed()) }
+
+    private var revealRefusal: String? { targets.isEmpty ? "No image selected" : nil }
 
     /// File → Edit in Excerpt, or E: several images open there as one series.
     @objc func editInExcerpt(_ sender: Any?) {
@@ -372,7 +377,16 @@ extension BrowserWindowController {
             NSSound.beep()
             return
         }
-        excerpt.open(editTargets)
+        excerpt.open(targets)
+    }
+
+    /// File → Show in Finder, or ⌘R: the images' folder opens in Finder with them selected.
+    @objc func showInFinder(_ sender: Any?) {
+        guard revealRefusal == nil else {
+            NSSound.beep()
+            return
+        }
+        finder(targets)
     }
 }
 
@@ -380,6 +394,11 @@ extension BrowserWindowController: NSMenuItemValidation {
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         if item.action == #selector(editInExcerpt(_:)) {
             let refusal = editRefusal
+            item.toolTip = refusal
+            return refusal == nil
+        }
+        if item.action == #selector(showInFinder(_:)) {
+            let refusal = revealRefusal
             item.toolTip = refusal
             return refusal == nil
         }
