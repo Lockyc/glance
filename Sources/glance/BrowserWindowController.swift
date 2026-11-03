@@ -26,6 +26,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     /// Where Show in Finder sends images; tests swap it for a recorder. Finder opens each image's folder with it selected.
     var finder: ([URL]) -> Void = { NSWorkspace.shared.activateFileViewerSelecting($0) }
 
+    /// Where Browse Folder sends an image: the app's ordinary open, which lands on its folder's window at that image.
+    var browse: (URL) -> Void = { (NSApp.delegate as? AppDelegate)?.openURL($0) }
+
     private let decodeCache: DecodeCache
     private let viewer: ViewerView
     private let grid: any BrowserGrid
@@ -388,6 +391,24 @@ extension BrowserWindowController {
         }
         finder(targets)
     }
+
+    /// The folder Browse Folder opens: the first target's.
+    private var browseFolderName: String? { targets.first?.deletingLastPathComponent().lastPathComponent }
+
+    /// An ordinary window already browses its own images' folder (or tree), so only a set or comparison can browse.
+    private var browseRefusal: String? {
+        guard let name = browseFolderName else { return "No image selected" }
+        return model.scope == .fixed ? nil : "Already browsing “\(name)”"
+    }
+
+    /// File → Browse “folder”, or ⌘↑: the image's folder in its own window, at that image.
+    @objc func browseFolder(_ sender: Any?) {
+        guard browseRefusal == nil, let url = targets.first else {
+            NSSound.beep()
+            return
+        }
+        browse(url)
+    }
 }
 
 extension BrowserWindowController: NSMenuItemValidation {
@@ -399,6 +420,12 @@ extension BrowserWindowController: NSMenuItemValidation {
         }
         if item.action == #selector(showInFinder(_:)) {
             let refusal = revealRefusal
+            item.toolTip = refusal
+            return refusal == nil
+        }
+        if item.action == #selector(browseFolder(_:)) {
+            item.title = browseFolderName.map { "Browse “\($0)”" } ?? "Browse Folder"
+            let refusal = browseRefusal
             item.toolTip = refusal
             return refusal == nil
         }

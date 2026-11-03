@@ -203,7 +203,10 @@ final class ViewerView: NSView, ZoomActions {
         clickSequenceIsOurs = false
     }
 
+    override func menu(for event: NSEvent) -> NSMenu? { MainMenu.contextMenu() }
+
     override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control) { return rightMouseDown(with: event) }
         if event.clickCount <= 1 { clickSequenceIsOurs = true }
         guard event.clickCount == 2, clickSequenceIsOurs, let viewport else { return }
         let point = convert(event.locationInWindow, from: nil)

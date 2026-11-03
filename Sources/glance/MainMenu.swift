@@ -22,8 +22,9 @@ enum MainMenu {
 
         let file = submenu(in: main, title: "File")
         file.addItem(withTitle: "Open…", action: #selector(AppDelegate.openDocument(_:)), keyEquivalent: "o")
-        file.addItem(withTitle: "Edit in Excerpt", action: #selector(BrowserWindowController.editInExcerpt(_:)), keyEquivalent: "e")
-        file.addItem(withTitle: "Show in Finder", action: #selector(BrowserWindowController.showInFinder(_:)), keyEquivalent: "r")
+        file.addItem(.separator())
+        imageItems().forEach(file.addItem)
+        file.addItem(.separator())
         file.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
 
         let view = submenu(in: main, title: "View")
@@ -50,6 +51,23 @@ enum MainMenu {
         NSApp.windowsMenu = window
 
         return main
+    }
+
+    /// The commands on the image in view or the grid's selection: the File menu's middle group and the right-click menu.
+    static func imageItems() -> [NSMenuItem] {
+        let upArrow = String(UnicodeScalar(NSUpArrowFunctionKey)!)
+        return [
+            NSMenuItem(title: "Browse Folder", action: #selector(BrowserWindowController.browseFolder(_:)), keyEquivalent: upArrow),
+            NSMenuItem(title: "Show in Finder", action: #selector(BrowserWindowController.showInFinder(_:)), keyEquivalent: "r"),
+            NSMenuItem(title: "Edit in Excerpt", action: #selector(BrowserWindowController.editInExcerpt(_:)), keyEquivalent: "e"),
+        ]
+    }
+
+    /// The right-click menu of the viewer, grid tiles and comparison cells.
+    static func contextMenu() -> NSMenu {
+        let menu = NSMenu()
+        imageItems().forEach(menu.addItem)
+        return menu
     }
 
     private static func submenu(in main: NSMenu, title: String) -> NSMenu {

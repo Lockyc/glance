@@ -288,7 +288,15 @@ final class ComparisonGridView: NSView {
         }
     }
 
+    /// Right-clicking a cell selects it first.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let point = convert(event.locationInWindow, from: nil)
+        if let index = cellViews.firstIndex(where: { $0.frame.contains(point) }) { selection = cell(at: index) }
+        return MainMenu.contextMenu()
+    }
+
     override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control) { return rightMouseDown(with: event) }
         let point = convert(event.locationInWindow, from: nil)
         guard let index = cellViews.firstIndex(where: { $0.frame.contains(point) }) else { return super.mouseDown(with: event) }
         window?.makeFirstResponder(self)

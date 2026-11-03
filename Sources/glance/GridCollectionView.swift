@@ -21,7 +21,16 @@ final class GridCollectionView: NSCollectionView {
         }
     }
 
+    /// Right-clicking a tile outside the selection selects just that tile first, as Finder does.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        if let path = indexPathForItem(at: convert(event.locationInWindow, from: nil)), !selectionIndexPaths.contains(path) {
+            selectionIndexPaths = [path]
+        }
+        return MainMenu.contextMenu()
+    }
+
     override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control) { return rightMouseDown(with: event) }
         let extending = !event.modifierFlags.intersection([.command, .shift]).isEmpty
         if !extending, let path = indexPathForItem(at: convert(event.locationInWindow, from: nil)) {
             onActivate?(path)
