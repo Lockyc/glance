@@ -38,7 +38,7 @@ build:
 icons:
     plate icon --icns Resources/AppIcon.icns --png 256:Resources/icon.png Resources/icon.svg
 
-# Assemble .build/glance.app (version from VERSION, document types from --list-types, Sparkle embedded; signed with APPLE_SIGNING_IDENTITY, else ad-hoc)
+# Assemble .build/glance.app (version from VERSION, document types from --list-types, Sparkle embedded; signed with APPLE_SIGNING_IDENTITY, else the keychain's Developer ID, else ad-hoc)
 [group("build")]
 bundle: build
     #!/usr/bin/env bash
@@ -57,8 +57,13 @@ bundle: build
         plutil -insert CFBundleDocumentTypes.0.LSItemContentTypes -string "$t" -append "$plist"
     done
     # Inside-out: each nested Sparkle helper before the framework, the framework before the app.
-    if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
-        sign=(codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY")
+    # Unset APPLE_SIGNING_IDENTITY → this Mac's Developer ID when the keychain has one: its designated
+    # requirement is bundle id + team, stable across builds, so privacy grants (folder access) survive
+    # a rebuild. An ad-hoc signature's is the cdhash — every rebuild is a new app to TCC.
+    identity=${APPLE_SIGNING_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null | awk '/"Developer ID Application: /{print $2; exit}')}
+    ts=--timestamp; [ -n "${APPLE_SIGNING_IDENTITY:-}" ] || ts=--timestamp=none
+    if [ -n "$identity" ]; then
+        sign=(codesign --force --options runtime "$ts" --sign "$identity")
     else
         sign=(codesign --force --sign -)
     fi

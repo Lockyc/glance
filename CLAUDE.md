@@ -59,7 +59,7 @@ Cutting a release: bump `VERSION` on `dev`, curate `README.md`, commit and push 
 release itself (notarize, tag, fast-forward `main`, publish `glance.zip`) is run by the
 maintainer's release tooling, outside this repo. The interface it relies on: `just gate`, and
 `just bundle` signing the justfile's `app` (`.build/glance.app`) with the Developer ID named by `APPLE_SIGNING_IDENTITY` and the
-hardened runtime. Without that variable the bundle is ad-hoc signed, which runs locally.
+hardened runtime. Without that variable it signs with the keychain's Developer ID, else ad-hoc.
 
 ## Build & test
 
