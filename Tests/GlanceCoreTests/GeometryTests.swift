@@ -101,4 +101,10 @@ final class GeometryTests: XCTestCase {
         XCTAssertEqual(shrunk.size, CGSize(width: 200, height: 200))
         XCTAssertTrue(tiny.contains(shrunk))
     }
+
+    func testANotchedWheelScrollsInLinesATrackpadInPoints() {
+        XCTAssertEqual(Viewport.scrollPoints(3, precise: true), 3)
+        XCTAssertEqual(Viewport.scrollPoints(1, precise: false), Viewport.pointsPerLine)
+        XCTAssertEqual(Viewport.scrollPoints(-2, precise: false), -2 * Viewport.pointsPerLine)
+    }
 }

@@ -6,6 +6,11 @@ public struct Viewport: Equatable {
     public static let maxScale: CGFloat = 32
     /// Largest long side an SVG is re-rasterised at when zoomed: 8192² × 4 bytes ≈ 256 MB.
     public static let vectorPixelCeiling = 8192
+    /// Points one line of a notched mouse wheel scrolls: a notch zooms about 10% or pans 10 points.
+    public static let pointsPerLine: CGFloat = 10
+
+    /// A scroll delta in points: a trackpad's (precise) already is one, a notched wheel's is in lines.
+    public static func scrollPoints(_ delta: CGFloat, precise: Bool) -> CGFloat { precise ? delta : delta * pointsPerLine }
 
     public private(set) var imageSize: CGSize
     public private(set) var viewSize: CGSize

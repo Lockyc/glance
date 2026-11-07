@@ -184,10 +184,13 @@ final class ViewerView: NSView, ZoomActions {
     }
 
     override func scrollWheel(with event: NSEvent) {
+        let precise = event.hasPreciseScrollingDeltas
+        let dx = Viewport.scrollPoints(event.scrollingDeltaX, precise: precise)
+        let dy = Viewport.scrollPoints(event.scrollingDeltaY, precise: precise)
         if event.modifierFlags.contains(.command) {
-            zoom(by: exp(event.scrollingDeltaY * 0.01), about: convert(event.locationInWindow, from: nil))
+            zoom(by: exp(dy * 0.01), about: convert(event.locationInWindow, from: nil))
         } else if let viewport, !viewport.isFit {
-            self.viewport = viewport.panned(by: CGSize(width: event.scrollingDeltaX, height: -event.scrollingDeltaY))
+            self.viewport = viewport.panned(by: CGSize(width: dx, height: -dy))
             applyViewport()
         } else {
             super.scrollWheel(with: event)
