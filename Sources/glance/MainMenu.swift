@@ -27,6 +27,9 @@ enum MainMenu {
         file.addItem(.separator())
         file.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
 
+        let edit = submenu(in: main, title: "Edit")
+        edit.addItem(copyItem())
+
         let view = submenu(in: main, title: "View")
         view.addItem(withTitle: "Toggle Grid", action: #selector(BrowserWindowController.toggleGrid(_:)), keyEquivalent: "g")
         view.addItem(withTitle: "Show Comparison Context", action: #selector(BrowserWindowController.toggleComparisonContext(_:)),
@@ -63,10 +66,17 @@ enum MainMenu {
         ]
     }
 
+    /// Edit → Copy, or ⌘C: the image in view or the grid's selection.
+    static func copyItem() -> NSMenuItem {
+        NSMenuItem(title: "Copy", action: #selector(BrowserWindowController.copy(_:)), keyEquivalent: "c")
+    }
+
     /// The right-click menu of the viewer, grid tiles and comparison cells.
     static func contextMenu() -> NSMenu {
         let menu = NSMenu()
         imageItems().forEach(menu.addItem)
+        menu.addItem(.separator())
+        menu.addItem(copyItem())
         return menu
     }
 

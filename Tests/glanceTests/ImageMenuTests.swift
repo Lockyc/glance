@@ -48,14 +48,14 @@ final class ImageMenuTests: XCTestCase {
     func testTheFileMenuAndTheRightClickMenuCarryTheSameCommands() {
         let actions = [#selector(BrowserWindowController.browseFolder(_:)), #selector(BrowserWindowController.showInFinder(_:)),
                        #selector(BrowserWindowController.editInExcerpt(_:))]
-        XCTAssertEqual(MainMenu.contextMenu().items.compactMap(\.action), actions)
+        XCTAssertEqual(MainMenu.contextMenu().items.compactMap(\.action), actions + [#selector(BrowserWindowController.copy(_:))])
         let file = fileMenu
         XCTAssertEqual(item(actions[0], in: file).keyEquivalent, String(UnicodeScalar(NSUpArrowFunctionKey)!))
         XCTAssertEqual(item(actions[1], in: file).keyEquivalent, "r")
         XCTAssertEqual(item(actions[2], in: file).keyEquivalent, "e")
         let click = NSEvent.mouseEvent(with: .rightMouseDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0,
                                        context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
-        XCTAssertEqual(ViewerView().menu(for: click)?.items.compactMap(\.action), actions)
+        XCTAssertEqual(ViewerView().menu(for: click)?.items.compactMap(\.action), actions + [#selector(BrowserWindowController.copy(_:))])
     }
 
     func testShowInFinderRevealsTheImageInView() throws {
@@ -128,5 +128,45 @@ final class ImageMenuTests: XCTestCase {
         XCTAssertFalse(controller.validateMenuItem(item))
         XCTAssertEqual(item.toolTip, "Already browsing “\(controller.model.folder.lastPathComponent)”")
         controller.browseFolder(nil)
+    }
+
+    private var editMenu: NSMenu { MainMenu.make(updater: nil).items.compactMap(\.submenu).first { $0.title == "Edit" }! }
+
+    private func testPasteboard() -> NSPasteboard { NSPasteboard(name: .init("glance-test-\(UUID().uuidString)")) }
+
+    func testCopyPutsTheImageInViewOnThePasteboardAsFileAndPicture() throws {
+        let controller = try controller(["a.png", "b.png", "c.png"])
+        let pasteboard = testPasteboard()
+        controller.pasteboard = pasteboard
+        let copy = item(#selector(BrowserWindowController.copy(_:)), in: editMenu)
+        XCTAssertEqual(copy.keyEquivalent, "c")
+        XCTAssertTrue(controller.validateMenuItem(copy))
+        controller.copy(nil)
+        let items = try XCTUnwrap(pasteboard.pasteboardItems)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].string(forType: .fileURL).flatMap(URL.init(string:))?.lastPathComponent, "b.png")
+        XCTAssertEqual(items[0].data(forType: .png), try Data(contentsOf: try XCTUnwrap(controller.model.current)))
+    }
+
+    func testCopyPutsTheGridSelectionOnThePasteboardAsFiles() throws {
+        let controller = try controller(["a.png", "b.png", "c.png"])
+        let pasteboard = testPasteboard()
+        controller.pasteboard = pasteboard
+        controller.showGrid()
+        let grid = try XCTUnwrap(controller.window?.firstResponder as? GridCollectionView)
+        grid.selectionIndexPaths = [IndexPath(item: 2, section: 0), IndexPath(item: 0, section: 0)]
+        controller.copy(nil)
+        let items = try XCTUnwrap(pasteboard.pasteboardItems)
+        XCTAssertEqual(items.compactMap { $0.string(forType: .fileURL).flatMap(URL.init(string:))?.lastPathComponent }, ["a.png", "c.png"])
+        XCTAssertNil(items[0].data(forType: .png))
+    }
+
+    func testAnEmptyGridSelectionDisablesCopyWithItsReason() throws {
+        let controller = try controller(["a.png", "b.png"])
+        controller.showGrid()
+        (controller.window?.firstResponder as? GridCollectionView)?.selectionIndexPaths = []
+        let copy = item(#selector(BrowserWindowController.copy(_:)), in: editMenu)
+        XCTAssertFalse(controller.validateMenuItem(copy))
+        XCTAssertEqual(copy.toolTip, "No image selected")
     }
 }

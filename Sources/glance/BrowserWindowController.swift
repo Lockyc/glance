@@ -26,6 +26,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     /// Where Show in Finder sends images; tests swap it for a recorder. Finder opens each image's folder with it selected.
     var finder: ([URL]) -> Void = { NSWorkspace.shared.activateFileViewerSelecting($0) }
 
+    /// Where Copy writes; tests swap it for a private pasteboard.
+    var pasteboard = NSPasteboard.general
+
     /// Where Browse Folder sends an image: the app's ordinary open, which lands on its folder's window at that image.
     var browse: (URL) -> Void = { (NSApp.delegate as? AppDelegate)?.openURL($0) }
 
@@ -369,7 +372,16 @@ extension BrowserWindowController {
 
     private var editRefusal: String? { ExternalEditor.refusal(for: targets, installed: excerpt.installed()) }
 
-    private var revealRefusal: String? { targets.isEmpty ? "No image selected" : nil }
+    private var selectionRefusal: String? { targets.isEmpty ? "No image selected" : nil }
+
+    /// Edit → Copy, or ⌘C: the images as files, and a lone image as a picture too.
+    @objc func copy(_ sender: Any?) {
+        guard selectionRefusal == nil else {
+            NSSound.beep()
+            return
+        }
+        ImagePasteboard.write(targets, to: pasteboard)
+    }
 
     /// File → Edit in Excerpt, or E: several images open there as one series.
     @objc func editInExcerpt(_ sender: Any?) {
@@ -382,7 +394,7 @@ extension BrowserWindowController {
 
     /// File → Show in Finder, or ⌘R: the images' folder opens in Finder with them selected.
     @objc func showInFinder(_ sender: Any?) {
-        guard revealRefusal == nil else {
+        guard selectionRefusal == nil else {
             NSSound.beep()
             return
         }
@@ -415,8 +427,8 @@ extension BrowserWindowController: NSMenuItemValidation {
             item.toolTip = refusal
             return refusal == nil
         }
-        if item.action == #selector(showInFinder(_:)) {
-            let refusal = revealRefusal
+        if item.action == #selector(showInFinder(_:)) || item.action == #selector(copy(_:)) {
+            let refusal = selectionRefusal
             item.toolTip = refusal
             return refusal == nil
         }
