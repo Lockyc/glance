@@ -168,5 +168,5 @@ final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewD
                            bounds: view.bounds.insetBy(dx: 8, dy: 8), pixels: Int((side * backingScale).rounded(.up)))
     }
 
-    @objc private func hidePreview() { previewer.hide() }
+    @objc func hidePreview() { previewer.hide() }
 }

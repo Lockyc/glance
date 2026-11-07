@@ -148,6 +148,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     func showViewer() {
         showingGrid = false
+        grid.hidePreview()
         grid.view.isHidden = true
         viewer.isHidden = false
         context?.isHidden = !Self.showsContext

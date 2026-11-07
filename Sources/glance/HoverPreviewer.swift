@@ -47,12 +47,18 @@ final class HoverPreviewer {
         preview.hide()
     }
 
+    /// Shows the tile's thumbnail at once and sharpens it when the larger decode lands; with no
+    /// thumbnail yet, waits for that decode, so a failed one never leaves an empty box.
     private func show(_ target: HoverTarget, key: AnyHashable?) {
-        let aspectSource = target.image.map { CGSize(width: $0.width, height: $0.height) } ?? CGSize(width: 1, height: 1)
-        preview.show(target.image, frame: HoverPreview.frame(around: target.tile, imageSize: aspectSource, side: target.side, bounds: target.bounds))
+        if let image = target.image { present(image, target) }
         request = thumbnails.request(target.url, pixelSize: target.pixels) { [weak self] result in
             guard let self, self.hoveredKey == key, case .success(let image) = result else { return }
-            self.preview.update(image)
+            self.preview.isHidden ? self.present(image, target) : self.preview.update(image)
         }
+    }
+
+    private func present(_ image: CGImage, _ target: HoverTarget) {
+        let size = CGSize(width: image.width, height: image.height)
+        preview.show(image, frame: HoverPreview.frame(around: target.tile, imageSize: size, side: target.side, bounds: target.bounds))
     }
 }

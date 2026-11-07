@@ -169,7 +169,7 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
                            bounds: view.bounds.insetBy(dx: 8, dy: 8), pixels: Int((side * backingScale).rounded(.up)))
     }
 
-    @objc private func hidePreview() { previewer.hide() }
+    @objc func hidePreview() { previewer.hide() }
 }
 
 /// The grid's document view and first responder: arrows move the selection in 2D (onto empty

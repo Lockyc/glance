@@ -11,4 +11,6 @@ protocol BrowserGrid: AnyObject {
     var selectedFiles: [URL] { get }
     func reload()
     func reveal(_ index: Int?)
+    /// Drops the hover preview and any pending one, so leaving the grid never strands either.
+    func hidePreview()
 }

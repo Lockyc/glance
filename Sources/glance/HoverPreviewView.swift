@@ -24,7 +24,7 @@ final class HoverPreviewView: NSView {
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
-    func show(_ image: CGImage?, frame: CGRect) {
+    func show(_ image: CGImage, frame: CGRect) {
         self.frame = frame
         CATransaction.begin()
         CATransaction.setDisableActions(true)
