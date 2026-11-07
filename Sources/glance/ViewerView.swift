@@ -210,6 +210,7 @@ final class ViewerView: NSView, ZoomActions {
 
     override func mouseDown(with event: NSEvent) {
         if event.modifierFlags.contains(.control) { return rightMouseDown(with: event) }
+        mouseDownPoint = event.locationInWindow
         if event.clickCount <= 1 { clickSequenceIsOurs = true }
         guard event.clickCount == 2, clickSequenceIsOurs, let viewport else { return }
         let point = convert(event.locationInWindow, from: nil)
@@ -217,9 +218,35 @@ final class ViewerView: NSView, ZoomActions {
         applyViewport()
     }
 
+    /// Where the last press landed, in window coordinates: a drag out starts only past `dragSlop` from it.
+    private var mouseDownPoint: NSPoint?
+    private static let dragSlop: CGFloat = 4
+
+    /// A fitted image has nothing to pan, so dragging it carries the file out to another app.
     override func mouseDragged(with event: NSEvent) {
+        if let item = dragOutItem() {
+            guard let start = mouseDownPoint,
+                  hypot(event.locationInWindow.x - start.x, event.locationInWindow.y - start.y) > Self.dragSlop else { return }
+            mouseDownPoint = nil
+            beginDraggingSession(with: [item], event: event, source: self)
+            return
+        }
         guard let viewport else { return }
         self.viewport = viewport.panned(by: CGSize(width: event.deltaX, height: -event.deltaY))
         applyViewport()
+    }
+
+    /// The image on screen as a dragged file, while it is fitted; nil once zoomed (a drag pans).
+    func dragOutItem() -> NSDraggingItem? {
+        guard let image, viewport?.isFit == true else { return nil }
+        let item = NSDraggingItem(pasteboardWriter: ImagePasteboard.item(for: image.url, withData: true))
+        item.setDraggingFrame(imageLayer.frame, contents: NSImage(cgImage: image.cgImage, size: imageLayer.frame.size))
+        return item
+    }
+}
+
+extension ViewerView: NSDraggingSource {
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        context == .outsideApplication ? .copy : []
     }
 }

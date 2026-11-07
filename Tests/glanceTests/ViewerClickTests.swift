@@ -36,6 +36,15 @@ final class ViewerClickTests: XCTestCase {
         XCTAssertEqual(v.viewport?.isFit, true)
     }
 
+    func testAFittedImageDragsOutAsItsFileAZoomedOneDoesNot() throws {
+        let v = viewer()
+        let item = try XCTUnwrap(v.dragOutItem())
+        let written = try XCTUnwrap(item.item as? NSPasteboardItem)
+        XCTAssertEqual(written.string(forType: .fileURL), URL(fileURLWithPath: "/x/big.png").absoluteString)
+        v.actualSize(nil)
+        XCTAssertNil(v.dragOutItem(), "a zoomed image pans instead")
+    }
+
     /// A zoom's pending full-detail request belongs to the image it was made for.
     func testShowingAnotherImageDropsThePendingResolutionRequest() {
         _ = NSApplication.shared

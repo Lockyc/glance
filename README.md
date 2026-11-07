@@ -76,6 +76,7 @@ or glance → Settings….
 | + / − | Zoom in / out |
 | Pinch or ⌘-scroll | Zoom about the cursor |
 | Drag, or scroll when zoomed | Pan |
+| Drag when fitted | Drag the image out to another app |
 | Double-click | Toggle fit ↔ actual size |
 
 **Grid**
