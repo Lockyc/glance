@@ -331,12 +331,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case .toggleGrid: toggleGrid(nil)
         case .toggleFullScreen: window?.toggleFullScreen(nil)
         case .editInExcerpt: editInExcerpt(nil)
-        case .exitFullScreen:
-            if fullScreen {
-                window?.toggleFullScreen(nil)
-            } else if comparison != nil {
-                showGrid()
-            }
+        case .escape:
+            fullScreen ? window?.toggleFullScreen(nil) : showGrid()
         }
     }
 

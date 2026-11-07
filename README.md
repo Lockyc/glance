@@ -66,7 +66,7 @@ or glance → Settings….
 | Home / End | First / last image |
 | G or Space | Thumbnail grid |
 | F or ⌃⌘F | Toggle full screen |
-| Esc | Leave full screen |
+| Esc | Leave full screen, otherwise thumbnail grid |
 | E or ⌘E | Edit in Excerpt (PNG only) |
 | ⌘R | Show in Finder |
 | ⌘↑ | Browse the image's folder (from a set or comparison) |
@@ -121,8 +121,7 @@ folder reuses its existing window.
 | Return or click | Open the cell in the viewer |
 | Click a header or the map (viewer) | Open that cell |
 | G / Space / Esc (grid) | Open the viewer on the current cell |
-| G / Space (viewer) | Back to the grid |
-| Esc (viewer) | Leave full screen, otherwise back to the grid |
+| G / Space / Esc (viewer) | Back to the grid (Esc leaves full screen first) |
 | ⌘+ / ⌘− | Larger / smaller cells (remembered) |
 
 ## Formats

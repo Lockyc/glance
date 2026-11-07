@@ -1,7 +1,7 @@
 import AppKit
 import GlanceCore
 
-enum ViewerCommand { case next, previous, up, down, first, last, toggleGrid, toggleFullScreen, exitFullScreen, editInExcerpt }
+enum ViewerCommand { case next, previous, up, down, first, last, toggleGrid, toggleFullScreen, escape, editInExcerpt }
 
 /// One image on a CALayer: fit / zoom / pan, animation, and an in-place message for a file that
 /// fails to open. Holds no navigation state — commands go up through `onCommand`.
@@ -165,7 +165,7 @@ final class ViewerView: NSView, ZoomActions {
         case .home?: onCommand?(.first)
         case .end?: onCommand?(.last)
         default:
-            if event.keyCode == 53 { onCommand?(.exitFullScreen); return }
+            if event.keyCode == 53 { onCommand?(.escape); return }
             switch event.charactersIgnoringModifiers {
             case "g", " ": onCommand?(.toggleGrid)
             case "f": onCommand?(.toggleFullScreen)

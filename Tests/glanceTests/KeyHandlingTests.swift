@@ -27,7 +27,7 @@ final class KeyHandlingTests: XCTestCase {
         var commands: [ViewerCommand] = []
         viewer.onCommand = { commands.append($0) }
         for event in [right, left, up, down, home, end, key("g", 5), key(" ", 49), key("f", 3), esc] { viewer.keyDown(with: event) }
-        XCTAssertEqual(commands, [.next, .previous, .up, .down, .first, .last, .toggleGrid, .toggleGrid, .toggleFullScreen, .exitFullScreen])
+        XCTAssertEqual(commands, [.next, .previous, .up, .down, .first, .last, .toggleGrid, .toggleGrid, .toggleFullScreen, .escape])
     }
 
     func testWindowNavigatesAndRoundTripsThroughTheGrid() throws {
@@ -53,6 +53,9 @@ final class KeyHandlingTests: XCTestCase {
         XCTAssertTrue(window.firstResponder is GridCollectionView, "g opens the grid")
         window.firstResponder?.keyDown(with: esc)
         XCTAssertTrue(window.firstResponder is ViewerView, "Esc returns to the viewer")
+        window.firstResponder?.keyDown(with: esc)
+        XCTAssertTrue(window.firstResponder is GridCollectionView, "Esc in a folder's viewer opens the grid")
+        window.firstResponder?.keyDown(with: esc)
 
         window.firstResponder?.keyDown(with: key(" ", 49))
         let grid = try XCTUnwrap(window.firstResponder as? GridCollectionView)
