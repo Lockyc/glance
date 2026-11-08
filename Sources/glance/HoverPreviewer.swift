@@ -18,7 +18,7 @@ final class HoverPreviewer {
     private let thumbnails: ThumbnailService
     private var timer: Timer?
     private var hoveredKey: AnyHashable?
-    private var request: Operation?
+    private var request: ThumbnailRequest?
     /// The target the preview was shown for, while it is.
     private var shown: HoverTarget?
 

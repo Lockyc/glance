@@ -12,6 +12,26 @@ final class CountingDecoder: ImageDecoding {
     }
 }
 
+/// Evicted files: every one when `evicted`, else those named `cloud*`. A `nil` `image` with
+/// `hangs` never answers, as iCloud does while its sync is backed up.
+final class FakeCloud: CloudThumbnailing {
+    private let lock = NSLock()
+    private var _asked = 0
+    private var _cancelled = 0
+    var asked: Int { lock.withLock { _asked } }
+    var cancelled: Int { lock.withLock { _cancelled } }
+    let evicted: Bool
+    let image: CGImage?
+    let hangs: Bool
+    init(evicted: Bool, image: CGImage?, hangs: Bool = false) { self.evicted = evicted; self.image = image; self.hangs = hangs }
+    func isEvicted(_ url: URL) -> Bool { evicted || url.lastPathComponent.hasPrefix("cloud") }
+    func thumbnail(_ url: URL, maxPixelSize: Int, completion: @escaping (CGImage?) -> Void) -> () -> Void {
+        lock.withLock { _asked += 1 }
+        if !hangs { DispatchQueue.global().async { [image] in completion(image) } }
+        return { [weak self] in self?.lock.withLock { self?._cancelled += 1 } }
+    }
+}
+
 final class ThumbnailServiceTests: XCTestCase {
     let images = Fixtures.tempDir()
     let cache = Fixtures.tempDir()
@@ -65,6 +85,59 @@ final class ThumbnailServiceTests: XCTestCase {
         let image = try thumbnail(service, url, 100).get()
         XCTAssertEqual(decoder.count, 2)
         XCTAssertEqual(image.height, 100)
+    }
+
+    func testEvictedFileTakesItsThumbnailFromTheCloudWithoutDecoding() throws {
+        let url = images.appendingPathComponent("p.png")
+        Fixtures.write(Fixtures.testImage(width: 400, height: 300), to: url, type: .png)
+        let decoder = CountingDecoder()
+        let cloud = FakeCloud(evicted: true, image: Fixtures.testImage(width: 100, height: 75))
+        let image = try thumbnail(ThumbnailService(decoder: decoder, cloud: cloud, cacheDirectory: cache), url, 100).get()
+        XCTAssertEqual(decoder.count, 0, "an evicted file was read, which downloads it")
+        XCTAssertEqual(image.width, 100)
+        XCTAssertEqual(cacheFiles().count, 1)
+    }
+
+    func testEvictedFileWithNoCloudThumbnailIsDecoded() throws {
+        let url = images.appendingPathComponent("p.png")
+        Fixtures.write(Fixtures.testImage(width: 400, height: 300), to: url, type: .png)
+        let decoder = CountingDecoder()
+        let service = ThumbnailService(decoder: decoder, cloud: FakeCloud(evicted: true, image: nil), cacheDirectory: cache)
+        _ = try thumbnail(service, url, 100).get()
+        XCTAssertEqual(decoder.count, 1)
+    }
+
+    func testLocalFileNeverAsksTheCloud() throws {
+        let url = images.appendingPathComponent("p.png")
+        Fixtures.write(Fixtures.testImage(width: 400, height: 300), to: url, type: .png)
+        let cloud = FakeCloud(evicted: false, image: Fixtures.testImage(width: 10, height: 10))
+        let image = try thumbnail(ThumbnailService(cloud: cloud, cacheDirectory: cache), url, 100).get()
+        XCTAssertEqual(image.width, 100)
+        XCTAssertEqual(cloud.asked, 0)
+    }
+
+    func testLocalFileIsNotHeldUpByEvictedOnesThatNeverArrive() throws {
+        let local = images.appendingPathComponent("p.png")
+        Fixtures.write(Fixtures.testImage(width: 400, height: 300), to: local, type: .png)
+        let service = ThumbnailService(cloud: FakeCloud(evicted: false, image: nil, hangs: true), cacheDirectory: cache)
+        for i in 0..<64 {
+            let url = images.appendingPathComponent("cloud\(i).png")
+            Fixtures.write(Fixtures.testImage(width: 40, height: 30), to: url, type: .png)
+            service.request(url, pixelSize: 100) { _ in XCTFail("a hung cloud thumbnail completed") }
+        }
+        XCTAssertEqual(try thumbnail(service, local, 100).get().width, 100)
+    }
+
+    func testCancellingAnEvictedRequestCancelsItsCloudThumbnail() throws {
+        let url = images.appendingPathComponent("cloud.png")
+        Fixtures.write(Fixtures.testImage(width: 40, height: 30), to: url, type: .png)
+        let cloud = FakeCloud(evicted: false, image: nil, hangs: true)
+        let service = ThumbnailService(cloud: cloud, cacheDirectory: cache)
+        let request = service.request(url, pixelSize: 100) { _ in XCTFail("cancelled request completed") }
+        let deadline = Date().addingTimeInterval(5)
+        while cloud.asked == 0, Date() < deadline { RunLoop.main.run(until: Date().addingTimeInterval(0.01)) }
+        request.cancel()
+        XCTAssertEqual(cloud.cancelled, 1)
     }
 
     func testFailuresAreNotCachedToDisk() {

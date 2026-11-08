@@ -10,7 +10,7 @@ final class ComparisonCellView: NSView {
     private(set) var isLoading = false {
         didSet { staticLayer.isAnimating = isLoading }
     }
-    private var request: Operation?
+    private var request: ThumbnailRequest?
     private var requestedPixels = 0
     private(set) var url: URL?
     private(set) var image: CGImage?

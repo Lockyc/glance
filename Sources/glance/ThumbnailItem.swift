@@ -13,7 +13,7 @@ final class ThumbnailItem: NSCollectionViewItem {
     private(set) var isLoading = false {
         didSet { staticLayer.isAnimating = isLoading }
     }
-    private var request: Operation?
+    private var request: ThumbnailRequest?
     private var url: URL?
     private(set) var image: CGImage?
 
