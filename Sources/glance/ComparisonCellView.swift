@@ -56,7 +56,19 @@ final class ComparisonCellView: NSView {
         imageLayer.backgroundColor = NSColor(white: 1, alpha: url == nil ? 0.03 : 0.06).cgColor
         isLoading = url != nil && image == nil
         guard let url else { request = nil; return }
-        request = service.request(url, pixelSize: pixelSize) { [weak self] result in
+        load(url, service: service)
+    }
+
+    /// Asks again for the cell's file, keeping what it shows until the answer lands, so a re-saved
+    /// file swaps in place; an unchanged one is a cache hit.
+    func refresh(service: ThumbnailService) {
+        guard let url, requestedPixels > 0 else { return }
+        load(url, service: service)
+    }
+
+    private func load(_ url: URL, service: ThumbnailService) {
+        request?.cancel()
+        request = service.request(url, pixelSize: requestedPixels) { [weak self] result in
             guard let self, self.url == url else { return }
             self.isLoading = false
             if case .success(let image) = result { self.image = image }

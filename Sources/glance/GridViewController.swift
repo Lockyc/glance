@@ -115,6 +115,11 @@ final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewD
         scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
+    func refreshThumbnails() {
+        let pixels = thumbnailPixels
+        for case let item as ThumbnailItem in collectionView.visibleItems() { item.refresh(pixelSize: pixels, service: thumbnails) }
+    }
+
     func reveal(_ index: Int?) {
         guard let index, listed.indices.contains(index) else { return }
         let path = sections.indexPath(for: index)

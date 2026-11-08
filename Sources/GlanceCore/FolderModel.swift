@@ -10,7 +10,7 @@ public final class FolderModel {
         case flat
         /// Every image under the folder, oldest first; `excluded` are folder paths relative to it.
         case tree(excluded: Set<String>)
-        /// Exactly the listed files, duplicates included, never scanned or watched.
+        /// Exactly the listed files, duplicates included, never scanned or relisted.
         case fixed
     }
 

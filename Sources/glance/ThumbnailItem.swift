@@ -57,6 +57,18 @@ final class ThumbnailItem: NSCollectionViewItem {
         caption.stringValue = url.lastPathComponent
         view.toolTip = url.lastPathComponent
         isLoading = true
+        load(url, pixelSize: pixelSize, service: service)
+    }
+
+    /// Asks again for the tile's file, keeping what it shows until the answer lands, so a re-saved
+    /// file swaps in place; an unchanged one is a cache hit.
+    func refresh(pixelSize: Int, service: ThumbnailService) {
+        guard let url else { return }
+        load(url, pixelSize: pixelSize, service: service)
+    }
+
+    private func load(_ url: URL, pixelSize: Int, service: ThumbnailService) {
+        request?.cancel()
         request = service.request(url, pixelSize: pixelSize) { [weak self] result in
             guard let self, self.url == url else { return }
             self.isLoading = false

@@ -43,7 +43,8 @@ thin. Anything testable without a window belongs in `GlanceCore`.
 
 - PDF is never listed or claimed — every type set excludes types conforming to `UTType.pdf`.
 - No decoding on the main thread; failures render in place, never as a modal.
-- A set or comparison window (`Scope.fixed`) is never scanned, watched, or reused by an ordinary open.
+- A set or comparison window (`Scope.fixed`) is never scanned, relisted, or reused by an ordinary open; it
+  watches its files' folders only to redraw re-saved files.
 - A tree's `FolderModel.files` and `dates` stay parallel (the grid's month sections index
   both): pass a tree's dates to every `replaceFiles(_:dates:)`; a flat folder has none.
 - A comparison window's `FolderModel.files` is `Comparison.files`, so index i ↔ `Comparison.cells[i]`:

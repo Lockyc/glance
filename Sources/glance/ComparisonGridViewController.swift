@@ -119,6 +119,10 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
         configureCells()
     }
 
+    func refreshThumbnails() {
+        grid.cellViews.forEach { $0.refresh(service: thumbnails) }
+    }
+
     func reveal(_ index: Int?) {
         guard let index, comparison.cells.indices.contains(index) else { return }
         grid.selection = comparison.cells[index]

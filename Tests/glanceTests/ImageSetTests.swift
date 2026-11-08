@@ -3,7 +3,7 @@ import AppKit
 import GlanceCore
 import XCTest
 
-/// A window on an explicit file list: never scanned, never watched.
+/// A window on an explicit file list: never scanned or relisted.
 final class ImageSetTests: XCTestCase {
     private var dir: URL!
     private var delegate: AppDelegate!

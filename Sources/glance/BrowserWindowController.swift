@@ -1,7 +1,7 @@
 import AppKit
 import GlanceCore
 
-/// One window per folder, set or comparison. Owns the folder model, its watcher and the prefetch cache, and swaps
+/// One window per folder, set or comparison. Owns the folder model, its watchers and the prefetch cache, and swaps
 /// between the viewer and the grid (both stay alive, so the grid keeps its scroll position).
 final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     let model: FolderModel
@@ -53,7 +53,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let roots: SubfolderRoots
     /// A folder opened (not a file) inside a root: the first listing lands on its newest image.
     private let landing: URL?
-    private var watcher: TreeWatcher?
+    private var watchers: [TreeWatcher] = []
     /// Bumped on a scope change so a listing of the old scope is dropped when it returns.
     private var scanGeneration = 0
     private var scanned = false
@@ -119,6 +119,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         empty.onInclude = { [weak self] in self?.toggleSubfolders(nil) }
         decodeCache.onDecoded = { [weak self] url, result in
             guard let self, url == self.model.current else { return }
+            // A re-decode of the file on screen: a zoom detail decode of the old bytes must not land over it.
+            if url == self.viewer.shownURL { self.upgrade?.cancel() }
             self.viewer.show(result, for: url)
             self.updateTitle()
         }
@@ -201,9 +203,21 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         return false
     }
 
+    /// A folder or tree is watched to relist it; a set or comparison only watches its files' folders
+    /// for re-saves, and is never relisted.
     private func watch() {
-        guard model.scope != .fixed else { return }
-        watcher = TreeWatcher(folder: model.folder, recursive: isRoot) { [weak self] in self?.request($0) }
+        if model.scope == .fixed {
+            let folders = Set(model.files.map { $0.deletingLastPathComponent().standardizedFileURL })
+            watchers = folders.compactMap { TreeWatcher(folder: $0, recursive: false) { [weak self] _ in self?.refreshContents() } }
+        } else {
+            watchers = [TreeWatcher(folder: model.folder, recursive: isRoot) { [weak self] in self?.request($0) }].compactMap { $0 }
+        }
+    }
+
+    /// Redraws any shown image or thumbnail whose file changed on disk; unchanged ones stay as they are.
+    private func refreshContents() {
+        decodeCache.revalidate()
+        grid.refreshThumbnails()
     }
 
     private func request(_ change: TreeWatcher.Change) {
@@ -246,7 +260,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
                 if let listing { self.model.replaceFiles(listing.files, dates: listing.dates) }
                 if first, let landing = self.landing { self.land(at: landing) }
                 if first, self.model.files.isEmpty { self.modelChanged(.files) }
-                self.decodeCache.revalidate()
+                self.refreshContents()
             }
         }
     }

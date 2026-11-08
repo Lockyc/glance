@@ -10,6 +10,8 @@ protocol BrowserGrid: AnyObject {
     /// The selected files, in grid order: what Edit in Excerpt sends.
     var selectedFiles: [URL] { get }
     func reload()
+    /// Re-reads the thumbnails on screen in place, for files that may have been re-saved.
+    func refreshThumbnails()
     func reveal(_ index: Int?)
     /// Drops the hover preview and any pending one, so leaving the grid never strands either.
     func hidePreview()

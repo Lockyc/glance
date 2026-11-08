@@ -12,7 +12,7 @@ final class ViewerView: NSView, ZoomActions {
 
     private let imageLayer = CALayer()
     private let message = NSTextField(labelWithString: "")
-    private var image: DecodedImage?
+    private(set) var image: DecodedImage?
     /// The file on screen, image or message — `nil` for the empty and loading states.
     private(set) var shownURL: URL?
     private(set) var viewport: Viewport?
@@ -48,18 +48,22 @@ final class ViewerView: NSView, ZoomActions {
 
     // MARK: Content
 
+    /// A new file fits; the same file re-saved at the same pixel size keeps its zoom and pan, and
+    /// asks again for any extra detail that zoom needs.
     func show(_ result: Result<DecodedImage, DecodeError>, for url: URL) {
         stopAnimation()
         resolutionWork?.cancel()
         switch result {
         case .success(let decoded):
+            let kept = url == shownURL ? viewport.flatMap { $0.imageSize == decoded.pixelSize ? $0 : nil } : nil
             image = decoded
             shownPixels = max(decoded.cgImage.width, decoded.cgImage.height)
             requestedPixels = shownPixels
             message.isHidden = true
             imageLayer.isHidden = false
             imageLayer.contents = decoded.cgImage
-            viewport = .fit(imageSize: decoded.pixelSize, viewSize: bounds.size, backingScale: backingScale)
+            viewport = kept?.resized(to: bounds.size, backingScale: backingScale)
+                ?? .fit(imageSize: decoded.pixelSize, viewSize: bounds.size, backingScale: backingScale)
             applyViewport()
             if decoded.isAnimated { startAnimation(decoded.url) }
         case .failure:
