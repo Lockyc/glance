@@ -9,10 +9,11 @@ final class HoverPreviewTests: XCTestCase {
     private var collection: GridCollectionView!
     private var grid: GridViewController!
     private var preview: HoverPreviewView!
+    private var dir: URL!
 
     override func setUpWithError() throws {
         _ = NSApplication.shared
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("glance-hover-\(UUID().uuidString)")
+        dir = FileManager.default.temporaryDirectory.appendingPathComponent("glance-hover-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         writeTestPNG(to: dir.appendingPathComponent("a.png"), width: 64, height: 48, color: CGColor(red: 1, green: 0, blue: 0, alpha: 1))
         try Data("not an image".utf8).write(to: dir.appendingPathComponent("b.png"))
@@ -55,6 +56,21 @@ final class HoverPreviewTests: XCTestCase {
         wait()
         controller.showGrid()
         XCTAssertTrue(preview.isHidden)
+    }
+
+    func testAnOpenPreviewRedrawsAReSavedFileInItsNewShape() throws {
+        grid.mouseMoved(with: mouse(.mouseMoved, at: try tile(0)))
+        wait()
+        XCTAssertFalse(preview.isHidden)
+        let before = try XCTUnwrap(preview.image)
+        XCTAssertGreaterThan(preview.frame.width, preview.frame.height)
+
+        writeTestPNG(to: dir.appendingPathComponent("a.png"), width: 48, height: 64, color: CGColor(red: 0, green: 0, blue: 1, alpha: 1))
+        let deadline = Date().addingTimeInterval(3)
+        while preview.image === before, Date() < deadline { wait(0.02) }
+        XCTAssertFalse(preview.image === before, "the open preview kept the old image")
+        XCTAssertFalse(preview.isHidden)
+        XCTAssertLessThan(preview.frame.width, preview.frame.height, "the preview kept the old shape")
     }
 
     func testAnImageThatFailsToLoadShowsNoPreview() throws {

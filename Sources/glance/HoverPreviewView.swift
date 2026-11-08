@@ -36,7 +36,20 @@ final class HoverPreviewView: NSView {
         NSAnimationContext.runAnimationGroup { $0.duration = 0.12; animator().alphaValue = 1 }
     }
 
-    func update(_ image: CGImage) { imageLayer.contents = image }
+    /// What the preview shows, or nil while hidden.
+    var image: CGImage? { imageLayer.contents.map { $0 as! CGImage } }
+
+    /// Swaps the image in place, with no fade; a `frame` re-shapes the preview around it.
+    func update(_ image: CGImage, frame: CGRect? = nil) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if let frame {
+            self.frame = frame
+            imageLayer.frame = bounds
+        }
+        imageLayer.contents = image
+        CATransaction.commit()
+    }
 
     func hide() {
         isHidden = true

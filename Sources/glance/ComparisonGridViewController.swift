@@ -121,6 +121,7 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
 
     func refreshThumbnails() {
         grid.cellViews.forEach { $0.refresh(service: thumbnails) }
+        previewer.refresh()
     }
 
     func reveal(_ index: Int?) {

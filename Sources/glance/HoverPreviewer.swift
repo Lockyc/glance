@@ -19,6 +19,8 @@ final class HoverPreviewer {
     private var timer: Timer?
     private var hoveredKey: AnyHashable?
     private var request: Operation?
+    /// The target the preview was shown for, while it is.
+    private var shown: HoverTarget?
 
     init(preview: HoverPreviewView, thumbnails: ThumbnailService) {
         self.preview = preview
@@ -44,12 +46,26 @@ final class HoverPreviewer {
         request?.cancel()
         request = nil
         hoveredKey = nil
+        shown = nil
         preview.hide()
+    }
+
+    /// Re-reads the open preview's file, for a file that may have been re-saved: the image swaps
+    /// in place and the preview re-shapes around it. An unchanged file is a cache hit.
+    func refresh() {
+        guard let target = shown, !preview.isHidden else { return }
+        let key = hoveredKey
+        request?.cancel()
+        request = thumbnails.request(target.url, pixelSize: target.pixels) { [weak self] result in
+            guard let self, self.hoveredKey == key, case .success(let image) = result else { return }
+            self.preview.update(image, frame: self.frame(for: image, target))
+        }
     }
 
     /// Shows the tile's thumbnail at once and sharpens it when the larger decode lands; with no
     /// thumbnail yet, waits for that decode, so a failed one never leaves an empty box.
     private func show(_ target: HoverTarget, key: AnyHashable?) {
+        shown = target
         if let image = target.image { present(image, target) }
         request = thumbnails.request(target.url, pixelSize: target.pixels) { [weak self] result in
             guard let self, self.hoveredKey == key, case .success(let image) = result else { return }
@@ -58,7 +74,10 @@ final class HoverPreviewer {
     }
 
     private func present(_ image: CGImage, _ target: HoverTarget) {
-        let size = CGSize(width: image.width, height: image.height)
-        preview.show(image, frame: HoverPreview.frame(around: target.tile, imageSize: size, side: target.side, bounds: target.bounds))
+        preview.show(image, frame: frame(for: image, target))
+    }
+
+    private func frame(for image: CGImage, _ target: HoverTarget) -> CGRect {
+        HoverPreview.frame(around: target.tile, imageSize: CGSize(width: image.width, height: image.height), side: target.side, bounds: target.bounds)
     }
 }

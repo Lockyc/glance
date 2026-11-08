@@ -118,6 +118,7 @@ final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewD
     func refreshThumbnails() {
         let pixels = thumbnailPixels
         for case let item as ThumbnailItem in collectionView.visibleItems() { item.refresh(pixelSize: pixels, service: thumbnails) }
+        previewer.refresh()
     }
 
     func reveal(_ index: Int?) {
