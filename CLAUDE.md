@@ -26,7 +26,6 @@ Package.swift
 VERSION                  # the one version source
 justfile                 # recipes: `just` lists them
 install.sh               # curl-pipeable installer: latest release's glance.zip, team-ID + notarization checked
-.claude/commands/glance/install.md  # the guided /glance:install over install.sh
 Sources/GlanceCore/      # all logic — unit-tested
 Sources/glance/          # the AppKit shell (executable)
 Resources/icon.svg       # the app icon master; `just icons` renders AppIcon.icns and icon.png from it
