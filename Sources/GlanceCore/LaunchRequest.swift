@@ -25,6 +25,8 @@ public enum LaunchRequest: Equatable, Codable {
         case activateApp
         case help
         case open(LaunchRequest)
+        /// `--link`: print the request's `glance://` URL instead of opening it.
+        case link(LaunchRequest)
     }
 
     public struct ParseError: Error, Equatable {
@@ -40,6 +42,9 @@ public enum LaunchRequest: Equatable, Codable {
                glance <file>...                           open files as a set
                glance --variant <label> <file>... [--variant <label> <file>...]...
                                                           compare labelled variants side by side
+               glance --link <file>... | <folder> | --variant ...
+                                                          print a glance:// link that opens the same
+                                                          view when clicked, instead of opening it
         --variant starts a labelled group of files; one or more groups make a comparison.
         Each variant is a column; row n holds every variant's nth file, so list each variant's
         shots in the same order. A row is named after its file stem with the variant label
@@ -58,6 +63,15 @@ public enum LaunchRequest: Equatable, Codable {
             return .activateApp
         }
         if arguments == ["--help"] || arguments == ["-h"] { return .help }
+        if arguments.first == "--link" {
+            let rest = Array(arguments.dropFirst())
+            guard !rest.isEmpty else { throw ParseError(message: "--link needs files, a folder or variants") }
+            guard case .open(let request) = try parse(rest, workingDirectory: workingDirectory,
+                                                      launchedByLaunchServices: false) else {
+                throw ParseError(message: "--link needs files, a folder or variants")
+            }
+            return .link(request)
+        }
 
         func resolve(_ path: String) -> URL {
             URL(fileURLWithPath: path, relativeTo: workingDirectory).standardizedFileURL.absoluteURL

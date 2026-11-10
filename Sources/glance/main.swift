@@ -42,6 +42,9 @@ do {
             exit(0)
         }
         dispatchMain()
+    case .link(let request):
+        print(request.url.absoluteString)
+        exit(0)
     case .open(let request):
         NSWorkspace.shared.open([request.url], withApplicationAt: appBundle(),
                                 configuration: NSWorkspace.OpenConfiguration()) { _, error in

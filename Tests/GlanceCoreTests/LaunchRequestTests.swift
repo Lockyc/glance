@@ -64,6 +64,19 @@ final class LaunchRequestTests: XCTestCase {
                        .open(.comparison([Variant(label: "only", files: [resolved("x.png", in: dir)])])))
     }
 
+    func testLinkWrapsTheSameRequest() throws {
+        let dir = Fixtures.tempDir()
+        for args in [["a.png", "b.png"], [dir.path], ["--variant", "v1", "a.png", "--variant", "v2", "b.png"]] {
+            guard case .open(let request) = try parse(args, in: dir) else { return XCTFail("\(args)") }
+            XCTAssertEqual(try parse(["--link"] + args, in: dir), .link(request), "\(args)")
+        }
+        for args in [["--link"], ["--link", "--help"], ["--link", "--link", "a.png"]] {
+            XCTAssertThrowsError(try parse(args, in: dir), "\(args)") {
+                XCTAssertTrue($0 is LaunchRequest.ParseError)
+            }
+        }
+    }
+
     func testErrors() {
         let dir = Fixtures.tempDir()
         let sub = dir.appendingPathComponent("sub", isDirectory: true)

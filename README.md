@@ -103,7 +103,11 @@ glance <folder>                                  # open a folder
 glance <file>...                                 # open the files as a set
 glance --variant <label> <file>... [--variant <label> <file>...]...
                                                  # compare labelled variants side by side
+glance --link <any of the above>                 # print a glance:// link instead of opening
 ```
+
+A `--link` link opens the same view when clicked anywhere macOS hands it to glance — a terminal
+hyperlink (`[shots](glance://open?r=…)` in Markdown a terminal renders), a note, a doc.
 
 A set is just the files you name, in that order; it is never rescanned and Include Subfolders
 doesn't apply. A comparison takes one or more `--variant` groups: each group is a column and each
