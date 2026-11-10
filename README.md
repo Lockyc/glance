@@ -7,54 +7,76 @@
 ![Swift](https://img.shields.io/badge/swift-6-F05138?logo=swift&logoColor=white)
 [![License](https://img.shields.io/github/license/lockyc/glance)](LICENSE)
 
-A fast, keyboard-driven image viewer for macOS. Open any image and ←/→ step instantly through
-the rest of its folder; a full-window thumbnail grid, with an enlarged preview on hover, swaps
-in for jumping around. It opens every image format macOS can decode, plus SVG. PDFs stay with
-Preview. Turn on View → Include Subfolders for a folder and everything under it becomes one
-stream, oldest first, with month headers in the grid — a whole screenshots archive browsed in
-order. Hand it a handful of files and they open as a set; hand it labelled groups of files and
-it lays the variants out side by side for comparing.
-
-If you've used Xee, it's the same idea: arrow through a folder, as fast as the disk allows.
-glance is free and open source.
+Arrow through a folder of images as fast as the disk allows. Open any image and ←/→ steps
+through the rest of its folder; G swaps in a thumbnail grid for jumping around. Turn on Include
+Subfolders and years of screenshots become one stream, oldest first. Hand it labelled groups of
+files and it lays them out side by side for comparing. If you've used Xee, it's the same idea.
 
 ![glance showing the Carina Nebula, image 5 of 24 in its folder](docs/screenshots/viewer.png)
 
-![glance's thumbnail grid, with the hovered Hourglass Nebula enlarged](docs/screenshots/grid.png)
-
-![glance comparing five image models' renders of Big Buck Bunny, one model per column, one pose per row](docs/screenshots/comparison.png)
-
-<sub>Model renders adapted from Big Buck Bunny © Blender Foundation, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).</sub>
-
 ## Install
-
-Needs macOS 14+.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lockyc/glance/main/install.sh | bash
 glance --make-default   # optional: the default viewer for every image type except PDF
 ```
 
-The installer downloads the latest release, checks that it is signed by glance's developer and
-notarized by Apple, then installs `/Applications/glance.app` and links the `glance` command into
-`~/.local/bin`, which must be on your PATH. After that glance updates itself: it checks daily,
-and **glance → Check for Updates…** checks now.
+Needs macOS 14 or later. The installer downloads the latest release, checks that it is signed by
+glance's developer and notarized by Apple, installs `/Applications/glance.app` and links the
+`glance` command into `~/.local/bin`, which must be on your PATH. glance then updates itself: it
+checks daily, and **glance → Check for Updates…** checks now.
 
-Or build from source, with the Xcode command-line tools (Swift 6) and
-[`just`](https://github.com/casey/just):
+To build from source instead (needs the Xcode command-line tools with Swift 6, and
+[`just`](https://github.com/casey/just)):
 
 ```bash
 git clone https://github.com/lockyc/glance && cd glance
 just install        # builds glance.app into /Applications and links `glance` into ~/.local/bin
-just make-default   # makes glance the default viewer for every image type except PDF
+just make-default   # optional, as --make-default above
 ```
 
-Opening a file shows it in its folder; opening a folder (or dropping one on the Dock icon)
-opens the grid. A file anywhere inside a folder with Include Subfolders on opens that whole
-tree, at that file. Individual subfolders can be excluded from the View → Subfolders submenu
-or glance → Settings….
+## Features
 
-## Keys
+- **The viewer.** Opening a file shows it in its folder; ←/→ step through the rest, wrapping at
+  the ends. Zoom about the cursor with a pinch or ⌘-scroll, and drag a fitted image out to
+  another app.
+- **The grid.** Opening a folder, or dropping one on the Dock icon, opens a full-window
+  thumbnail grid; hovering a tile shows it enlarged. Select several tiles to copy them, show them
+  in Finder or edit them together.
+
+  ![glance's thumbnail grid, with the hovered Hourglass Nebula enlarged](docs/screenshots/grid.png)
+
+- **Subfolders.** **View → Include Subfolders** turns a folder and everything under it into one
+  stream, oldest first, with month headers in the grid. Opening any file inside it opens the
+  whole tree at that file. Exclude individual subfolders from **View → Subfolders** or
+  **glance → Settings…**.
+- **Sets and comparisons** — from the command line:
+
+  ```bash
+  glance <folder>                                  # open a folder
+  glance <file>...                                 # open the files as a set
+  glance --variant <label> <file>... [--variant <label> <file>...]...
+                                                   # compare labelled variants side by side
+  glance --link <any of the above>                 # print a glance:// link instead of opening
+  ```
+
+  A set is the files you name, in that order. A comparison makes each `--variant` a column and
+  each of its files a row, so the first file of every variant sits on the first row. Opening a
+  cell keeps every variant's label along the top and every shot down the left, with a map of the
+  grid in the corner; click a label or a map cell to jump there. Each set or comparison opens in
+  a new window. A `--link` link reopens the same view when clicked in a note, a doc or a chat.
+
+  ![glance comparing five image models' renders of Big Buck Bunny, one model per column, one pose per row](docs/screenshots/comparison.png)
+
+  <sub>Model renders adapted from Big Buck Bunny © Blender Foundation, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).</sub>
+
+- **Formats.** Everything ImageIO decodes — JPEG, PNG, HEIC/HEIF, WebP, AVIF, JPEG XL, TIFF, BMP,
+  GIF, ICO, ICNS, PSD, OpenEXR, TGA and camera RAW (CR2, CR3, NEF, ARW, RAF, ORF, DNG and more) —
+  plus SVG. Animated GIF, WebP and APNG play.
+- **Edit in [Excerpt](https://github.com/lockyc/excerpt)** (E): hands the PNG in view, or the
+  grid's selection as one series, to the screenshot editor.
+
+### Keys
 
 **Viewer**
 
@@ -94,28 +116,6 @@ or glance → Settings….
 | ⌘+ / ⌘− | Larger / smaller tiles (remembered) |
 | Hover | Enlarged preview |
 
-## Sets and comparisons
-
-```bash
-glance <folder>                                  # open a folder
-glance <file>...                                 # open the files as a set
-glance --variant <label> <file>... [--variant <label> <file>...]...
-                                                 # compare labelled variants side by side
-glance --link <any of the above>                 # print a glance:// link instead of opening
-```
-
-A `--link` link opens the same view when clicked anywhere macOS hands it to glance — a terminal
-hyperlink (`[shots](glance://open?r=…)` in Markdown a terminal renders), a note, a doc.
-
-A set is just the files you name, in that order; it is never rescanned and Include Subfolders
-doesn't apply. A comparison takes one or more `--variant` groups: each group is a column and each
-file in it a row, so the first file of every variant sits on the first row (a shorter variant
-leaves its remaining cells empty). Opening a cell keeps the grid's edges in view: every variant
-along the top and every shot down the left, the current ones highlighted, and a map of the whole
-grid in the corner; click a label or a map cell to jump there. View → Show Comparison Context hides
-them (remembered). Every set or comparison opens in a new window; a single
-folder reuses its existing window.
-
 **Comparison**
 
 | Key | Action |
@@ -129,12 +129,14 @@ folder reuses its existing window.
 | G / Space / Esc (viewer) | Back to the grid (Esc leaves full screen first) |
 | ⌘+ / ⌘− | Larger / smaller cells (remembered) |
 
-## Formats
+## Limits
 
-Everything ImageIO decodes — JPEG, PNG, HEIC/HEIF, WebP, AVIF, JPEG XL, TIFF, BMP, GIF, ICO,
-ICNS, PSD, OpenEXR, TGA and camera RAW (CR2, CR3, NEF, ARW, RAF, ORF, DNG and more) — plus SVG.
-Animated GIF, WebP and APNG play. A file that won't decode shows "Can't open" in place and
-navigation carries on.
+PDFs stay with Preview. A file that won't decode shows "Can't open" in its place, and navigation
+carries on. A set is never rescanned, and Include Subfolders doesn't apply to it.
+
+## Status
+
+In use, `0.x`. What's next: [docs/FOLLOWUPS.md](docs/FOLLOWUPS.md).
 
 ## Development
 
@@ -143,3 +145,9 @@ just test    # unit tests
 just bench   # latency benchmarks
 just run     # build the bundle and open it
 ```
+
+Architecture, conventions and the release process: [CLAUDE.md](CLAUDE.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE).
