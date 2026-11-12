@@ -84,15 +84,21 @@ sparkle-bin:
 run *paths: bundle
     open -a "$PWD/{{app}}" {{paths}}
 
-# Quit any running glance, install to /Applications, register with Launch Services, and link `glance` onto the PATH
+# Install to /Applications (reopening glance if it was running), register with Launch Services, and link `glance` onto the PATH
 [group("app")]
-install: bundle quit
+install: bundle
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Reopened only if it was running: a glance opened with no files is an empty window.
+    running=$(pgrep -x glance >/dev/null && echo 1 || true)
+    just quit
     rm -rf /Applications/glance.app
     cp -R "{{app}}" /Applications/glance.app
-    @# the commit this build came from: lets a later release (lockstep.sh) tell whether it is newer before replacing it
+    # the commit this build came from: lets a later release (lockstep.sh) tell whether it is newer before replacing it
     xattr -w com.lockyc.build-commit "$(git rev-parse HEAD)$(git status --porcelain | grep -q . && echo -dirty)" /Applications/glance.app
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/glance.app
     mkdir -p ~/.local/bin && ln -sf /Applications/glance.app/Contents/MacOS/glance ~/.local/bin/glance
+    if [ -n "$running" ]; then open /Applications/glance.app; fi
 
 # Quits any running glance, force-killing one still alive after 3s.
 [private]
