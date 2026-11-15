@@ -121,12 +121,30 @@ public enum LaunchRequest: Equatable, Codable {
 
         if !variants.isEmpty {
             guard plain.isEmpty else { throw ParseError(message: "files before the first --variant") }
+            try refuseSharedCells(variants)
             return .open(.comparison(variants))
         }
         let folders = plain.filter(isFolder)
         if folders.isEmpty { return .open(.set(plain)) }
         guard plain.count == 1 else { throw ParseError(message: "a folder can't be combined with other paths") }
         return .open(.folder(plain[0]))
+    }
+
+    /// Two variants showing one file in the same row compare it with itself — usually a "before"
+    /// overwritten by the change it was meant to show.
+    private static func refuseSharedCells(_ variants: [Variant]) throws {
+        let rows = variants.map(\.files.count).max() ?? 0
+        for row in 0..<rows {
+            var seen: [URL: String] = [:]
+            for variant in variants where row < variant.files.count {
+                let file = variant.files[row]
+                if let first = seen[file] {
+                    throw ParseError(message: "--variant \(first) and --variant \(variant.label) both show "
+                        + "\(file.lastPathComponent) in row \(row + 1): save each version to its own file")
+                }
+                seen[file] = variant.label
+            }
+        }
     }
 
     private static func isSingleDash(_ argument: String) -> Bool {

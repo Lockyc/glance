@@ -64,6 +64,16 @@ final class LaunchRequestTests: XCTestCase {
                        .open(.comparison([Variant(label: "only", files: [resolved("x.png", in: dir)])])))
     }
 
+    func testTwoVariantsShowingOneFileInARowAreRefused() throws {
+        let dir = Fixtures.tempDir()
+        XCTAssertThrowsError(try parse(["--variant", "before", "s01.png", "s04.png", "--variant", "after", "s01b.png", "./s04.png"], in: dir)) {
+            XCTAssertEqual(($0 as? LaunchRequest.ParseError)?.message,
+                           "--variant before and --variant after both show s04.png in row 2: save each version to its own file")
+        }
+        // The same file in different rows compares different shots, so it stands.
+        XCTAssertNoThrow(try parse(["--variant", "a", "x.png", "y.png", "--variant", "b", "y.png", "z.png"], in: dir))
+    }
+
     func testLinkWrapsTheSameRequest() throws {
         let dir = Fixtures.tempDir()
         for args in [["a.png", "b.png"], [dir.path], ["--variant", "v1", "a.png", "--variant", "v2", "b.png"]] {
