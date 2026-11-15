@@ -49,7 +49,9 @@ public enum LaunchRequest: Equatable, Codable {
         Each variant is a column; row n holds every variant's nth file, so list each variant's
         shots in the same order. A row is named after its file stem with the variant label
         removed (hero-v2-dark.png under --variant v2 reads hero-dark). A comparison takes
-        files, not folders.
+        files, not folders, and two variants can't show the same file in one row.
+        When every variant has one file, such as candidates to choose from, the grid wraps
+        into rows with each label over its picture: --variant a 01.jpg --variant b 02.jpg ...
         """
 
     /// Under Launch Services, no arguments or a leading Cocoa `-flag` means run the app. From a

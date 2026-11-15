@@ -63,8 +63,10 @@ just make-default   # optional, as --make-default above
   A set is the files you name, in that order. A comparison makes each `--variant` a column and
   each of its files a row, so the first file of every variant sits on the first row. Opening a
   cell keeps every variant's label along the top and every shot down the left, with a map of the
-  grid in the corner; click a label or a map cell to jump there. Each set or comparison opens in
-  a new window. A `--link` link reopens the same view when clicked in a note, a doc or a chat.
+  grid in the corner; click a label or a map cell to jump there. When every variant has one file,
+  such as candidates to choose from, the grid wraps into rows with each label over its picture.
+  Each set or comparison opens in a new window. A `--link` link reopens the same view when clicked
+  in a note, a doc or a chat; one glance can't read says so.
 
   ![glance comparing five image models' renders of Big Buck Bunny, one model per column, one pose per row](docs/screenshots/comparison.png)
 
