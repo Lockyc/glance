@@ -142,6 +142,16 @@ final class SnapshotTests: XCTestCase {
         try snapshot(window, "comparison-grid.png")
     }
 
+    /// Seventeen candidates, one file each, lettered as an agent asks for a pick.
+    func testComparisonLineup() throws {
+        let shapes = Shape.allCases
+        let spec = (0..<17).map { (String(UnicodeScalar(UInt8(97 + $0))), [shapes[$0 % shapes.count]]) }
+        let window = try window(try comparison(spec), size: NSSize(width: 1400, height: 900))
+        let (_, grid) = try comparisonGrid(window)
+        spin(until: "the lineup thumbnails") { thumbnailsLanded(grid) }
+        try snapshot(window, "comparison-lineup.png")
+    }
+
     /// Every cell still waiting on its thumbnail, so each shows its static.
     func testComparisonGridLoading() throws {
         let window = try window(try comparison([("a", [.wide, .tall]), ("b", [.wide]), ("c", [.square, .wide])]),

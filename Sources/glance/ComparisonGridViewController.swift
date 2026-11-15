@@ -2,7 +2,8 @@ import AppKit
 import GlanceCore
 
 /// The comparison grid: variants as columns under a pinned header, shots as rows with their
-/// labels in a left column. Every cell is the same size; an empty one stays in place.
+/// labels in a left column. Every cell is the same size; an empty one stays in place. A lineup
+/// instead wraps into rows that fit the window, each cell under its variant's label, with no header.
 final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomActions {
     var onOpen: ((Int) -> Void)?
     var onExit: (() -> Void)?
@@ -12,6 +13,7 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
     static let inset: CGFloat = 16
     static let labelWidth: CGFloat = 120
     static let headerHeight: CGFloat = 28
+    static let lineupLabelHeight: CGFloat = 22
 
     private let comparison: Comparison
     private let thumbnails: ThumbnailService
@@ -100,14 +102,24 @@ final class ComparisonGridViewController: NSViewController, BrowserGrid, ZoomAct
     override func viewDidLayout() {
         super.viewDidLayout()
         let bounds = view.bounds
-        header.frame = NSRect(x: 0, y: bounds.height - Self.headerHeight, width: bounds.width, height: Self.headerHeight)
-        scrollView.frame = NSRect(x: 0, y: 0, width: bounds.width, height: max(0, bounds.height - Self.headerHeight))
+        let headerHeight = comparison.isLineup ? 0 : Self.headerHeight
+        header.isHidden = comparison.isLineup
+        header.frame = NSRect(x: 0, y: bounds.height - headerHeight, width: bounds.width, height: headerHeight)
+        scrollView.frame = NSRect(x: 0, y: 0, width: bounds.width, height: max(0, bounds.height - headerHeight))
         let available = scrollView.contentSize
-        let chrome = Self.inset * 2 + Self.labelWidth + Self.spacing
-        cellSize = ComparisonLayout.cellSize(columns: comparison.columns, rows: comparison.rows,
-                                             available: CGSize(width: available.width - chrome, height: available.height - Self.inset * 2),
-                                             minimumSide: minimumSide, spacing: Self.spacing)
-        grid.layOut(cellSize: cellSize)
+        if comparison.isLineup {
+            let fit = LineupLayout.fit(count: comparison.columns,
+                                       available: CGSize(width: available.width - Self.inset * 2, height: available.height - Self.inset * 2),
+                                       minimumSide: minimumSide, spacing: Self.spacing, labelHeight: Self.lineupLabelHeight)
+            cellSize = CGSize(width: fit.side, height: fit.side)
+            grid.layOut(cellSize: cellSize, perRow: fit.perRow)
+        } else {
+            let chrome = Self.inset * 2 + Self.labelWidth + Self.spacing
+            cellSize = ComparisonLayout.cellSize(columns: comparison.columns, rows: comparison.rows,
+                                                 available: CGSize(width: available.width - chrome, height: available.height - Self.inset * 2),
+                                                 minimumSide: minimumSide, spacing: Self.spacing)
+            grid.layOut(cellSize: cellSize)
+        }
         laidOut = true
         configureCells()
         positionHeader()
@@ -189,7 +201,11 @@ final class ComparisonGridView: NSView {
     /// Row-major, `rows × columns`, empty cells included.
     let cellViews: [ComparisonCellView]
     private let rowLabels: [NSTextField]
+    /// A lineup's variant labels, one over each cell.
+    private(set) var cellLabels: [NSTextField] = []
     private var cellSize = CGSize.zero
+    /// A lineup's cells per row.
+    private var perRow = 1
 
     var selection = Comparison.Cell(row: 0, column: 0) {
         didSet {
@@ -202,17 +218,24 @@ final class ComparisonGridView: NSView {
     init(comparison: Comparison) {
         self.comparison = comparison
         cellViews = (0..<(comparison.rows * comparison.columns)).map { _ in ComparisonCellView() }
-        rowLabels = (0..<comparison.rows).map { row in
-            let label = NSTextField(labelWithString: comparison.rowLabel(row))
-            label.font = .systemFont(ofSize: 12)
+        func label(_ text: String, alignment: NSTextAlignment, font: NSFont) -> NSTextField {
+            let label = NSTextField(labelWithString: text)
+            label.font = font
             label.textColor = .secondaryLabelColor
-            label.alignment = .right
+            label.alignment = alignment
             label.lineBreakMode = .byTruncatingMiddle
             return label
+        }
+        if comparison.isLineup {
+            rowLabels = []
+            cellLabels = comparison.variants.map { label($0.label, alignment: .left, font: .systemFont(ofSize: 13, weight: .semibold)) }
+        } else {
+            rowLabels = (0..<comparison.rows).map { label(comparison.rowLabel($0), alignment: .right, font: .systemFont(ofSize: 12)) }
         }
         super.init(frame: .zero)
         cellViews.forEach(addSubview)
         rowLabels.forEach(addSubview)
+        cellLabels.forEach(addSubview)
         cellView(selection)?.isSelected = true
     }
 
@@ -241,7 +264,29 @@ final class ComparisonGridView: NSView {
     private func rowY(_ row: Int) -> CGFloat { Metrics.inset + CGFloat(row) * (cellSize.height + Metrics.spacing) }
 
     private func frame(of cell: Comparison.Cell) -> NSRect {
-        NSRect(x: columnX(cell.column), y: rowY(cell.row), width: cellSize.width, height: cellSize.height)
+        guard comparison.isLineup else {
+            return NSRect(x: columnX(cell.column), y: rowY(cell.row), width: cellSize.width, height: cellSize.height)
+        }
+        let row = CGFloat(cell.column / perRow), column = CGFloat(cell.column % perRow)
+        return NSRect(x: Metrics.inset + column * (cellSize.width + Metrics.spacing),
+                      y: Metrics.inset + row * (cellSize.height + Metrics.lineupLabelHeight + Metrics.spacing) + Metrics.lineupLabelHeight,
+                      width: cellSize.width, height: cellSize.height)
+    }
+
+    /// A lineup's layout; `perRow` comes from `LineupLayout.fit`.
+    func layOut(cellSize: CGSize, perRow: Int) {
+        self.cellSize = cellSize
+        self.perRow = max(1, perRow)
+        let count = comparison.columns, rows = CGFloat((count + self.perRow - 1) / self.perRow)
+        let across = CGFloat(min(count, self.perRow))
+        setFrameSize(NSSize(width: Metrics.inset * 2 + across * cellSize.width + max(0, across - 1) * Metrics.spacing,
+                            height: Metrics.inset * 2 + rows * (cellSize.height + Metrics.lineupLabelHeight) + max(0, rows - 1) * Metrics.spacing))
+        for (i, view) in cellViews.enumerated() {
+            view.frame = frame(of: cell(at: i))
+            let labelHeight = cellLabels[i].intrinsicContentSize.height
+            cellLabels[i].frame = NSRect(x: view.frame.minX, y: view.frame.minY - labelHeight - 3,
+                                         width: cellSize.width, height: labelHeight)
+        }
     }
 
     func layOut(cellSize: CGSize) {
@@ -273,7 +318,9 @@ final class ComparisonGridView: NSView {
     // MARK: Input
 
     private func move(_ move: Comparison.Move) {
-        selection = comparison.gridStep(from: selection, move)
+        selection = comparison.isLineup
+            ? Comparison.Cell(row: 0, column: LineupLayout.step(from: selection.column, move, perRow: perRow, count: comparison.columns))
+            : comparison.gridStep(from: selection, move)
         scrollSelectionToVisible()
     }
 
