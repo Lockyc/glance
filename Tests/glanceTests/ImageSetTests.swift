@@ -109,8 +109,11 @@ final class ImageSetTests: XCTestCase {
         XCTAssertEqual(delegate.controllers.count, 1)
     }
 
-    func testMalformedURLOpensNothing() {
+    func testMalformedURLOpensNothingAndSaysSo() {
+        var alerts: [String] = []
+        delegate.presentAlert = { alerts.append($0.messageText) }
         delegate.application(NSApplication.shared, open: [URL(string: "glance://open?r=garbage")!])
         XCTAssertTrue(delegate.controllers.isEmpty)
+        XCTAssertEqual(alerts, ["This glance link can't be read"])
     }
 }

@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updater: SPUStandardUpdaterController?
     /// Tests clear this so opening a window never orders it onto the screen or takes focus.
     var ordersWindowsFront = true
+    /// Tests replace this to read an alert instead of running it.
+    var presentAlert: (NSAlert) -> Void = { _ = $0.runModal() }
 
     init(roots: SubfolderRoots = .shared) {
         self.roots = roots
@@ -35,9 +37,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .set(let files): openSet(files)
             case .comparison(let variants): openComparison(Comparison(variants: variants))
             case .folder(let folder): openURL(folder)
-            case nil: break
+            case nil: reportUnreadableLink()
             }
         }
+    }
+
+    /// A link has no window to show its failure in, so it gets an alert rather than nothing at all.
+    private func reportUnreadableLink() {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "This glance link can't be read"
+        alert.informativeText = "It may have been cut short or written by hand. A new link from glance --link will open."
+        presentAlert(alert)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
