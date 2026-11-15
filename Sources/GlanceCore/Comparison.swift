@@ -41,6 +41,10 @@ public struct Comparison: Equatable {
 
     public var files: [URL] { cells.compactMap(file(at:)) }
 
+    /// One file per variant, such as candidates to choose from: the grid wraps it like a set, each
+    /// cell under its own label, instead of one column per variant.
+    public var isLineup: Bool { !variants.isEmpty && variants.allSatisfy { $0.files.count == 1 } }
+
     /// The shot's name with the variant label removed from the first present file's stem
     /// (`chips-a-open.png` under `a` → `chips-open`); `shot N` when nothing is left to name it.
     public func rowLabel(_ row: Int) -> String {
@@ -114,6 +118,46 @@ public enum ComparisonLayout {
             return max(minimumSide, (space - spacing * (n - 1)) / n)
         }
         return CGSize(width: side(columns, available.width), height: side(rows, available.height))
+    }
+}
+
+/// A lineup's grid: square cells in reading order, `perRow` to a row, each under a label.
+public enum LineupLayout {
+    public struct Fit: Equatable {
+        public let perRow: Int
+        public let side: CGFloat
+
+        public init(perRow: Int, side: CGFloat) {
+            self.perRow = perRow
+            self.side = side
+        }
+    }
+
+    /// The row length that gives the largest cells with every item on screen. When even that is below
+    /// `minimumSide`, cells keep the minimum (filling the width) and the grid scrolls down.
+    public static func fit(count: Int, available: CGSize, minimumSide: CGFloat, spacing: CGFloat, labelHeight: CGFloat) -> Fit {
+        let count = max(count, 1)
+        func across(_ perRow: Int) -> CGFloat { (available.width - spacing * CGFloat(perRow - 1)) / CGFloat(perRow) }
+        var best = Fit(perRow: 1, side: 0)
+        for perRow in 1...count {
+            let rows = CGFloat((count + perRow - 1) / perRow)
+            let side = min(across(perRow), (available.height - spacing * (rows - 1)) / rows - labelHeight)
+            if side > best.side { best = Fit(perRow: perRow, side: side) }
+        }
+        if best.side >= minimumSide { return best }
+        let perRow = max(1, min(count, Int((available.width + spacing) / (minimumSide + spacing))))
+        return Fit(perRow: perRow, side: max(minimumSide, across(perRow)))
+    }
+
+    /// ←/→ run through the reading order; ↑/↓ move a row, and ↓ into a short last row takes its last item.
+    public static func step(from index: Int, _ move: Comparison.Move, perRow: Int, count: Int) -> Int {
+        guard count > 0 else { return index }
+        switch move {
+        case .left: return max(0, index - 1)
+        case .right: return min(count - 1, index + 1)
+        case .up: return index >= perRow ? index - perRow : index
+        case .down: return index / perRow < (count - 1) / perRow ? min(count - 1, index + perRow) : index
+        }
     }
 }
 

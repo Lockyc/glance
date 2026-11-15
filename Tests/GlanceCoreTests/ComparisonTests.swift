@@ -67,6 +67,40 @@ final class ComparisonTests: XCTestCase {
         XCTAssertEqual(c.files, [u("same.png"), u("same.png")])
     }
 
+    func testLineupIsOneFilePerVariant() {
+        XCTAssertFalse(comparison.isLineup)
+        let picks = Comparison(variants: ["a", "b", "c"].map { Variant(label: $0, files: [u("\($0).jpg")]) })
+        XCTAssertTrue(picks.isLineup)
+        XCTAssertFalse(Comparison(variants: [Variant(label: "a", files: [u("a.jpg")]), Variant(label: "b", files: [])]).isLineup)
+    }
+
+    func testLineupFitPicksTheLargestSquareCells() {
+        let avail = CGSize(width: 1000, height: 600)
+        let fit = LineupLayout.fit(count: 17, available: avail, minimumSide: 100, spacing: 10, labelHeight: 20)
+        XCTAssertEqual(fit.perRow, 6)
+        XCTAssertEqual(fit.side, 950.0 / 6, accuracy: 0.001)
+        XCTAssertEqual(LineupLayout.fit(count: 2, available: avail, minimumSide: 100, spacing: 10, labelHeight: 20),
+                       LineupLayout.Fit(perRow: 2, side: 495))
+    }
+
+    func testLineupFitScrollsRatherThanShrinkBelowTheMinimum() {
+        let fit = LineupLayout.fit(count: 100, available: CGSize(width: 1000, height: 600), minimumSide: 100, spacing: 10, labelHeight: 20)
+        XCTAssertEqual(fit.perRow, 9)
+        XCTAssertEqual(fit.side, 920.0 / 9, accuracy: 0.001)
+    }
+
+    func testLineupStep() {
+        func step(_ i: Int, _ move: Comparison.Move) -> Int { LineupLayout.step(from: i, move, perRow: 6, count: 17) }
+        XCTAssertEqual(step(5, .right), 6, "reading order runs on to the next row")
+        XCTAssertEqual(step(16, .right), 16)
+        XCTAssertEqual(step(0, .left), 0)
+        XCTAssertEqual(step(8, .up), 2)
+        XCTAssertEqual(step(3, .up), 3)
+        XCTAssertEqual(step(4, .down), 10)
+        XCTAssertEqual(step(10, .down), 16, "a short last row takes its last item")
+        XCTAssertEqual(step(13, .down), 13)
+    }
+
     func testCellSize() {
         let avail = CGSize(width: 1000, height: 600)
         XCTAssertEqual(ComparisonLayout.cellSize(columns: 2, rows: 2, available: avail, minimumSide: 100, spacing: 10),
