@@ -43,7 +43,11 @@ do {
         }
         dispatchMain()
     case .link(let request):
-        print(request.url.absoluteString)
+        do {
+            print(try LinkStore.standard.link(for: request).absoluteString)
+        } catch {
+            fail("can't store the link: \(error.localizedDescription)", status: 1)
+        }
         exit(0)
     case .open(let request):
         NSWorkspace.shared.open([request.url], withApplicationAt: appBundle(),

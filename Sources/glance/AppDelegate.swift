@@ -33,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_ sender: NSApplication, open urls: [URL]) {
         for url in urls {
             guard url.scheme == "glance" else { openURL(url); continue }
-            switch LaunchRequest(url: url) {
+            switch LinkStore.standard.request(for: url) {
             case .set(let files): openSet(files)
             case .comparison(let variants): openComparison(Comparison(variants: variants))
             case .folder(let folder): openURL(folder)
@@ -47,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "This glance link can't be read"
-        alert.informativeText = "It may have been cut short or written by hand. A new link from glance --link will open."
+        alert.informativeText = "It may have been cut short, written by hand or made on another Mac. A new link from glance --link will open."
         presentAlert(alert)
     }
 
