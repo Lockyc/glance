@@ -4,11 +4,28 @@ import XCTest
 final class FakeDecoder: ImageDecoding {
     private let lock = NSLock()
     private var _calls: [URL] = []
+    private var gates: [URL: (started: DispatchSemaphore, release: DispatchSemaphore)] = [:]
     var delay: TimeInterval = 0
     var calls: [URL] { lock.withLock { _calls } }
 
+    /// Holds `url`'s decode once it starts, until `release(url)`. Returns what signals that it started.
+    func hold(_ url: URL) -> DispatchSemaphore {
+        let gate = (started: DispatchSemaphore(value: 0), release: DispatchSemaphore(value: 0))
+        lock.withLock { gates[url] = gate }
+        return gate.started
+    }
+
+    func release(_ url: URL) { lock.withLock { gates[url] }?.release.signal() }
+
     func decode(_ url: URL, maxPixelSize: Int) -> Result<DecodedImage, DecodeError> {
-        lock.withLock { _calls.append(url) }
+        let gate = lock.withLock {
+            _calls.append(url)
+            return gates[url]
+        }
+        if let gate {
+            gate.started.signal()
+            gate.release.wait()
+        }
         if delay > 0 { Thread.sleep(forTimeInterval: delay) }
         return .success(DecodedImage(url: url, cgImage: Fixtures.testImage(width: 4, height: 4),
                                      pixelSize: CGSize(width: 4, height: 4), isAnimated: false))
@@ -79,21 +96,21 @@ final class DecodeCacheTests: XCTestCase {
 }
 
 final class DecodeCacheFreshnessTests: XCTestCase {
+    /// 0's decode is held mid-way for the whole test, so 1 can only land if it no longer waits for 0.
     func testPromotedNeighbourDoesNotWaitForTheOldCurrent() {
         let files = (0..<20).map { URL(fileURLWithPath: "/f/\($0).jpg") }
         let decoder = FakeDecoder()
-        decoder.delay = 0.3
+        let started = decoder.hold(files[0])
+        defer { decoder.release(files[0]) }
         let cache = DecodeCache(decoder: decoder, maxPixelSize: 100)
-        let start = Date()
-        var landed: TimeInterval?
-        let done = expectation(description: "landed")
-        cache.onDecoded = { url, _ in
-            if url == files[1], landed == nil { landed = Date().timeIntervalSince(start); done.fulfill() }
-        }
+        let done = expectation(description: "1 landed")
+        done.assertForOverFulfill = false
+        cache.onDecoded = { url, _ in if url == files[1] { done.fulfill() } }
         cache.focus(on: 0, in: files)
-        cache.focus(on: 1, in: files) // → pressed before 0 finished
-        wait(for: [done], timeout: 3)
-        XCTAssertLessThan(landed ?? .infinity, 0.5, "1 waited for 0's decode")
+        XCTAssertEqual(started.wait(timeout: .now() + 5), .success, "0's decode never started")
+        cache.focus(on: 1, in: files) // → pressed while 0 is still decoding
+        wait(for: [done], timeout: 5)
+        XCTAssertNil(cache.result(for: files[0]), "0 is still held")
     }
 
     func testRevalidateRedecodesOnlyFilesThatChanged() throws {
