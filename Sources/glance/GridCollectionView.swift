@@ -1,4 +1,5 @@
 import AppKit
+import GlanceCore
 
 /// ↑/↓ are NSCollectionView's own selection movement; ←/→ step through the flat order (crossing
 /// month sections); this adds open/exit/edit keys and single-click-to-open, with ⌘- and ⇧-click
@@ -10,8 +11,7 @@ final class GridCollectionView: NSCollectionView {
 
     override func keyDown(with event: NSEvent) {
         switch GridKey.from(event) {
-        // min(), not first: the selection is a Set, so first is hash order.
-        case .activate: if let path = selectionIndexPaths.min() { onActivate?(path) }
+        case .activate: if let path = MonthSections.actionPath(selectionIndexPaths) { onActivate?(path) }
         case .exit: onExit?()
         case .toggleFullScreen: window?.toggleFullScreen(nil)
         case .editInExcerpt: _ = window?.tryToPerform(#selector(BrowserWindowController.editInExcerpt(_:)), with: nil)

@@ -48,4 +48,8 @@ public struct MonthSections: Equatable {
               path.item < sections[path.section].range.count else { return nil }
         return sections[path.section].range.lowerBound + path.item
     }
+
+    /// The tile a grid action (Return, ←/→) acts on when several are selected: the first in grid
+    /// order. `min()`, not `first`: a selection is a `Set`, so `first` is hash order.
+    public static func actionPath(_ selection: Set<IndexPath>) -> IndexPath? { selection.min() }
 }
