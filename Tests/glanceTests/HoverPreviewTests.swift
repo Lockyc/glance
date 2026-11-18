@@ -3,12 +3,33 @@ import AppKit
 import GlanceCore
 import XCTest
 
-/// The thumbnail grid's hover preview, driven with synthetic mouse events.
+/// Stands in for the hover delay: an armed preview waits for `fire()`, and a disarmed one never runs.
+final class ManualDelay {
+    private var armed: [Int: () -> Void] = [:]
+    private var next = 0
+    var isArmed: Bool { !armed.isEmpty }
+
+    func arm(_ fire: @escaping () -> Void) -> () -> Void {
+        let id = next
+        next += 1
+        armed[id] = fire
+        return { [weak self] in self?.armed[id] = nil }
+    }
+
+    func fire() {
+        let pending = armed.values
+        armed = [:]
+        pending.forEach { $0() }
+    }
+}
+
+/// The thumbnail grid's hover preview, driven with synthetic mouse events and a delay the test fires.
 final class HoverPreviewTests: XCTestCase {
     private var controller: BrowserWindowController!
     private var collection: GridCollectionView!
     private var grid: GridViewController!
     private var preview: HoverPreviewView!
+    private var delay: ManualDelay!
     private var dir: URL!
 
     override func setUpWithError() throws {
@@ -25,6 +46,8 @@ final class HoverPreviewTests: XCTestCase {
         collection = try XCTUnwrap(window.firstResponder as? GridCollectionView)
         grid = try XCTUnwrap(collection.dataSource as? GridViewController)
         preview = try XCTUnwrap(descendants(of: grid.view, HoverPreviewView.self).first)
+        delay = ManualDelay()
+        grid.previewer.arm = delay.arm
     }
 
     override func tearDown() { controller.close() }
@@ -40,11 +63,20 @@ final class HoverPreviewTests: XCTestCase {
                            context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
     }
 
-    private func wait(_ seconds: TimeInterval = 0.6) { RunLoop.main.run(until: Date().addingTimeInterval(seconds)) }
+    private func wait(_ seconds: TimeInterval) { RunLoop.main.run(until: Date().addingTimeInterval(seconds)) }
 
-    func testHoveringAnImageShowsItsPreview() throws {
+    /// Fires the hover delay, then runs the loop until the preview has its image.
+    private func fireAndAwaitPreview() {
+        delay.fire()
+        let deadline = Date().addingTimeInterval(5)
+        while preview.isHidden, Date() < deadline { wait(0.01) }
+    }
+
+    func testHoveringAnImageShowsItsPreviewOnlyAfterTheDelay() throws {
         grid.mouseMoved(with: mouse(.mouseMoved, at: try tile(0)))
-        wait()
+        XCTAssertTrue(delay.isArmed)
+        XCTAssertTrue(preview.isHidden, "shown before the delay")
+        fireAndAwaitPreview()
         XCTAssertFalse(preview.isHidden)
     }
 
@@ -53,14 +85,15 @@ final class HoverPreviewTests: XCTestCase {
         grid.mouseMoved(with: mouse(.mouseMoved, at: point))
         collection.mouseDown(with: mouse(.leftMouseDown, at: point))
         XCTAssertFalse(controller.showingGrid, "the click opens the viewer")
-        wait()
+        XCTAssertFalse(delay.isArmed, "the click left the hover delay armed")
+        delay.fire()
         controller.showGrid()
         XCTAssertTrue(preview.isHidden)
     }
 
     func testAnOpenPreviewRedrawsAReSavedFileInItsNewShape() throws {
         grid.mouseMoved(with: mouse(.mouseMoved, at: try tile(0)))
-        wait()
+        fireAndAwaitPreview()
         XCTAssertFalse(preview.isHidden)
         let before = try XCTUnwrap(preview.image)
         XCTAssertGreaterThan(preview.frame.width, preview.frame.height)
@@ -73,9 +106,11 @@ final class HoverPreviewTests: XCTestCase {
         XCTAssertLessThan(preview.frame.width, preview.frame.height, "the preview kept the old shape")
     }
 
+    /// A negative outcome has nothing to await, so this one runs the loop long enough for the failed decode.
     func testAnImageThatFailsToLoadShowsNoPreview() throws {
         grid.mouseMoved(with: mouse(.mouseMoved, at: try tile(1)))
-        wait()
+        delay.fire()
+        wait(0.3)
         XCTAssertTrue(preview.isHidden)
     }
 }

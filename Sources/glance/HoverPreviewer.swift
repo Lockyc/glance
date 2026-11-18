@@ -16,7 +16,12 @@ struct HoverTarget {
 final class HoverPreviewer {
     private let preview: HoverPreviewView
     private let thumbnails: ThumbnailService
-    private var timer: Timer?
+    /// Runs `fire` once `HoverPreview.delay` has passed; returns what disarms it. Tests fire it themselves.
+    var arm: (_ fire: @escaping () -> Void) -> () -> Void = { fire in
+        Timer.scheduledTimer(withTimeInterval: HoverPreview.delay, repeats: false) { _ in fire() }.invalidate
+    }
+
+    private var disarm: (() -> Void)?
     private var hoveredKey: AnyHashable?
     private var request: ThumbnailRequest?
     /// The target the preview was shown for, while it is.
@@ -33,7 +38,7 @@ final class HoverPreviewer {
         hide()
         hoveredKey = key
         guard key != nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: HoverPreview.delay, repeats: false) { [weak self] _ in
+        disarm = arm { [weak self] in
             guard let self, let target = resolve() else { return }
             self.show(target, key: key)
         }
@@ -41,8 +46,8 @@ final class HoverPreviewer {
 
     /// Also clears the hovered key, so after a scroll the next mouse move re-arms the preview.
     func hide() {
-        timer?.invalidate()
-        timer = nil
+        disarm?()
+        disarm = nil
         request?.cancel()
         request = nil
         hoveredKey = nil

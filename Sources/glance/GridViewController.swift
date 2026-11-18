@@ -13,7 +13,7 @@ final class GridViewController: NSViewController, BrowserGrid, NSCollectionViewD
     private let collectionView = GridCollectionView()
     private let layout = NSCollectionViewFlowLayout()
     private let preview = HoverPreviewView()
-    private lazy var previewer = HoverPreviewer(preview: preview, thumbnails: thumbnails)
+    private(set) lazy var previewer = HoverPreviewer(preview: preview, thumbnails: thumbnails)
     /// The file list and its month sections as last loaded into the collection view; items and
     /// old selections resolve against these, never against a model that may have moved on.
     private var listed: [URL] = []
