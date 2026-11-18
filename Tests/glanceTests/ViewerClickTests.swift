@@ -57,12 +57,16 @@ final class ViewerClickTests: XCTestCase {
         }
         var requested: [URL] = []
         v.onNeedsResolution = { url, _ in requested.append(url) }
+        var pending: [DispatchWorkItem] = []
+        v.afterZoomSettles = { pending.append($0) }
         // A is a screen-size decode that zooming outgrows; B is already at full detail, so it asks for nothing.
         let (a, decodedA) = image("a.png", bitmapWidth: 400), (b, decodedB) = image("b.png", bitmapWidth: 4000)
         v.show(.success(decodedA), for: a)
         v.actualSize(nil)
+        XCTAssertTrue(pending.contains { !$0.isCancelled }, "the zoom armed no request for A")
         v.show(.success(decodedB), for: b)
-        RunLoop.main.run(until: Date().addingTimeInterval(0.4))
+        // The delay elapses: as on a queue, a cancelled item does not run.
+        pending.filter { !$0.isCancelled }.forEach { $0.perform() }
         XCTAssertFalse(requested.contains(a))
     }
 }

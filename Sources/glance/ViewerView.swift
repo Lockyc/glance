@@ -9,6 +9,8 @@ final class ViewerView: NSView, ZoomActions {
     var onCommand: ((ViewerCommand) -> Void)?
     /// Asked when the zoom shows more detail than the current bitmap holds (url, long-side px).
     var onNeedsResolution: ((URL, Int) -> Void)?
+    /// Runs a resolution request once the zoom has settled for 150 ms. Tests run it themselves.
+    var afterZoomSettles: (DispatchWorkItem) -> Void = { DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: $0) }
 
     private let imageLayer = CALayer()
     private let message = NSTextField(labelWithString: "")
@@ -108,7 +110,7 @@ final class ViewerView: NSView, ZoomActions {
         let url = image.url
         let work = DispatchWorkItem { [weak self] in self?.onNeedsResolution?(url, needed) }
         resolutionWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
+        afterZoomSettles(work)
     }
 
     override func layout() {
