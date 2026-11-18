@@ -13,6 +13,20 @@ final class RelistModelTests: XCTestCase {
     func testRelistReplaysTheHiddenFolderCase() async {
         await #execute(RelistSpec.self, mode: .sequential, .commandLimit(15), .replay("A8ATY6NSM46XW-26"))
     }
+
+    /// `a` renamed to `c`, reported as the root and `c/b` but not `c`: the root's walk must take in all of
+    /// `c` before `c/b` is re-read, or `c/b`'s entries mark `c` as already listed and `c/x.png` is lost.
+    func testRelistReadsAParentBeforeItsReportedChild() throws {
+        let root = Fixtures.tempDir().resolvingSymlinksInPath()
+        defer { try? FileManager.default.removeItem(at: root) }
+        Fixtures.file("a/x.png", in: root, created: Fixtures.day(0))
+        Fixtures.file("a/b/x.png", in: root, created: Fixtures.day(1))
+        let listing = try FolderModel.scanTree(root, excluded: [])
+        try FileManager.default.moveItem(at: root.appendingPathComponent("a"), to: root.appendingPathComponent("c"))
+        let changed: Set = [root, root.appendingPathComponent("c/b", isDirectory: true)]
+        let relisted = FolderModel.relist(listing, root: root, excluded: [], changed: changed)
+        XCTAssertEqual(relisted, try FolderModel.scanTree(root, excluded: []))
+    }
 }
 
 @StateMachine
