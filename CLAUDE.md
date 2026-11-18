@@ -64,4 +64,4 @@ hardened runtime. Without that variable it signs with the keychain's Developer I
 
 ## Build & test
 
-`just test` (unit tests), `just gate` (pre-merge gate), `just bench` (latency benchmarks), `just snapshot DIR` (renders the comparison grid, viewer and hover previews off screen to PNGs in DIR).
+`just test` (unit tests), `just gate` (pre-merge gate), `just bench` (latency benchmarks), `just flake FILTER [N]` (repeats matching tests until one fails), `just snapshot DIR` (renders the comparison grid, viewer and hover previews off screen to PNGs in DIR).

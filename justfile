@@ -23,6 +23,24 @@ test:
 bench:
     GLANCE_BENCH=1 swift test --filter BenchmarkTests
 
+# Run the tests matching FILTER up to N times, stopping at the first failure and printing its log
+[group("check")]
+flake filter n="100":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    swift build --build-tests
+    log=$(mktemp -t glance-flake)
+    for i in $(seq 1 {{n}}); do
+        if ! swift test --skip-build --filter '{{filter}}' >"$log" 2>&1; then
+            grep -E "error:|failed \(" "$log" || cat "$log"
+            echo "failed on run $i of {{n}}; full log: $log"
+            exit 1
+        fi
+        printf '\rpassed %d/%d' "$i" {{n}}
+    done
+    echo
+    rm -f "$log"
+
 # Render the comparison grid, viewer and hover previews off screen to PNGs in DIR
 [group("check")]
 snapshot dir:
