@@ -140,6 +140,11 @@ carries on. A set is never rescanned, and Include Subfolders doesn't apply to it
 
 In use, `0.x`. What's next: [docs/FOLLOWUPS.md](docs/FOLLOWUPS.md).
 
+## Related
+
+- [Excerpt](https://github.com/lockyc/excerpt) — the screenshot tool; press E in glance to edit
+  the PNG in view.
+
 ## Development
 
 ```bash
