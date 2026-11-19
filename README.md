@@ -145,7 +145,7 @@ In use, `0.x`. What's next: [docs/FOLLOWUPS.md](docs/FOLLOWUPS.md).
 
 ```bash
 just test    # unit tests
-just bench   # latency benchmarks
+just gate    # pre-merge gate
 just run     # build the bundle and open it
 ```
 
