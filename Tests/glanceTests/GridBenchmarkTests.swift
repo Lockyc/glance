@@ -3,7 +3,7 @@ import AppKit
 import GlanceCore
 import XCTest
 
-/// Skipped unless GLANCE_BENCH=1 (`just bench`) — CI runners are too noisy to gate on wall-clock time.
+/// Skipped unless GLANCE_BENCH=1 (`just bench`): wall-clock timing is too noisy to gate on.
 final class GridBenchmarkTests: XCTestCase {
     func testLayoutOf25000TilesIn36MonthsUnder250ms() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["GLANCE_BENCH"] == "1", "run with `just bench`")

@@ -1,8 +1,8 @@
 @testable import GlanceCore
 import XCTest
 
-/// Latency targets from the spec. Skipped unless GLANCE_BENCH=1 (`just bench`) — CI runners
-/// are too noisy to gate on wall-clock time.
+/// Latency targets. Skipped unless GLANCE_BENCH=1 (`just bench`): wall-clock timing is too noisy
+/// to gate on.
 final class BenchmarkTests: XCTestCase {
     override func setUpWithError() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["GLANCE_BENCH"] == "1", "run with `just bench`")

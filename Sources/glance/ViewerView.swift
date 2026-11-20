@@ -230,9 +230,12 @@ final class ViewerView: NSView, ZoomActions {
 
     /// A fitted image has nothing to pan, so dragging it carries the file out to another app.
     override func mouseDragged(with event: NSEvent) {
-        if let item = dragOutItem() {
+        // The cheap test first: the dragging item reads the whole file, so it is built only once
+        // the pointer is past the slop, not on every small move of a press.
+        if image != nil, viewport?.isFit == true {
             guard let start = mouseDownPoint,
-                  hypot(event.locationInWindow.x - start.x, event.locationInWindow.y - start.y) > Self.dragSlop else { return }
+                  hypot(event.locationInWindow.x - start.x, event.locationInWindow.y - start.y) > Self.dragSlop,
+                  let item = dragOutItem() else { return }
             mouseDownPoint = nil
             beginDraggingSession(with: [item], event: event, source: self)
             return
